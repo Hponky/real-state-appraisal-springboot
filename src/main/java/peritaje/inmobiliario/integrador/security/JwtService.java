@@ -41,6 +41,18 @@ public class JwtService {
         return extractClaim(token, claims -> claims.get("sub", String.class));
     }
 
+    public String extractUsername(String token) {
+        // Supabase JWTs often use 'email' as the username, or 'sub' (subject) as the
+        // user ID.
+        // Prioritize 'email' if available, otherwise fall back to 'sub'.
+        Claims claims = extractAllClaims(token);
+        String email = claims.get("email", String.class);
+        if (email != null && !email.isEmpty()) {
+            return email;
+        }
+        return claims.get("sub", String.class); // Fallback to user ID if email is not present
+    }
+
     public Date extractExpiration(String token) {
         return extractClaim(token, Claims::getExpiration);
     }
@@ -53,7 +65,8 @@ public class JwtService {
         try {
             return !isTokenExpired(token);
         } catch (Exception e) {
-            // Log the exception (e.g., SignatureException, MalformedJwtException, ExpiredJwtException)
+            // Log the exception (e.g., SignatureException, MalformedJwtException,
+            // ExpiredJwtException)
             System.err.println("JWT Validation Error: " + e.getMessage());
             return false;
         }

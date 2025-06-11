@@ -9,6 +9,22 @@ public class ErrorResponse {
     private String error;
     private Integer statusCode;
 
+    public ErrorResponse() {
+        // Constructor por defecto
+    }
+
+    public ErrorResponse(String message, String error) {
+        this.message = message;
+        this.error = error;
+    }
+
+    public ErrorResponse(String message, String msg, String error, Integer statusCode) {
+        this.message = message;
+        this.msg = msg;
+        this.error = error;
+        this.statusCode = statusCode;
+    }
+
     public String getMessage() {
         return message;
     }

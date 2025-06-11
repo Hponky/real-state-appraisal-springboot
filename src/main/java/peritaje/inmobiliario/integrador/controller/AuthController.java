@@ -1,6 +1,6 @@
 package peritaje.inmobiliario.integrador.controller;
 
-import org.springframework.http.HttpStatus;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import peritaje.inmobiliario.integrador.dto.AuthRequest;
 import peritaje.inmobiliario.integrador.dto.AuthResponse;
+import peritaje.inmobiliario.integrador.dto.MigrationRequest;
 import peritaje.inmobiliario.integrador.service.SupabaseAuthService;
 import reactor.core.publisher.Mono;
 
@@ -23,40 +24,35 @@ public class AuthController {
     }
 
     @PostMapping("/signup")
-    public Mono<ResponseEntity<AuthResponse>> signUp(@RequestBody AuthRequest authRequest) {
-        if (authRequest.getEmail() == null || authRequest.getPassword() == null) {
-            return Mono.just(ResponseEntity.badRequest().body(null));
-        }
-
+    public Mono<ResponseEntity<AuthResponse>> signUp(@Valid @RequestBody AuthRequest authRequest) {
         return supabaseAuthService.signUp(authRequest)
                 .map(ResponseEntity::ok)
                 .onErrorResume(e -> {
-                    HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
-                    String errorMessage = "Supabase signup failed: " + e.getMessage();
-                    if (e instanceof RuntimeException && e.getMessage() != null && e.getMessage().contains("Email already registered")) {
-                        status = HttpStatus.CONFLICT;
-                        errorMessage = "Email already registered";
+                    if (e instanceof RuntimeException && e.getMessage() != null
+                            && e.getMessage().contains("Email already registered")) {
+                        return Mono.error(new RuntimeException("Email already registered", e));
                     }
-                    return Mono.just(ResponseEntity.status(status).body(null));
+                    return Mono.error(new RuntimeException("Supabase signup failed", e));
                 });
     }
 
     @PostMapping("/signin")
-    public Mono<ResponseEntity<AuthResponse>> signIn(@RequestBody AuthRequest authRequest) {
-        if (authRequest.getEmail() == null || authRequest.getPassword() == null) {
-            return Mono.just(ResponseEntity.badRequest().body(null));
-        }
-
+    public Mono<ResponseEntity<AuthResponse>> signIn(@Valid @RequestBody AuthRequest authRequest) {
+        System.out.println("Received sign-in request for email: " + authRequest.getEmail());
         return supabaseAuthService.signIn(authRequest)
                 .map(ResponseEntity::ok)
                 .onErrorResume(e -> {
-                    HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
-                    String errorMessage = "Supabase signin failed: " + e.getMessage();
-                    if (e instanceof RuntimeException && e.getMessage() != null && e.getMessage().contains("Invalid login credentials")) {
-                        status = HttpStatus.UNAUTHORIZED;
-                        errorMessage = "Invalid login credentials";
+                    if (e instanceof RuntimeException && e.getMessage() != null
+                            && e.getMessage().contains("Invalid login credentials")) {
+                        return Mono.error(new RuntimeException("Invalid login credentials", e));
                     }
-                    return Mono.just(ResponseEntity.status(status).body(null));
+                    return Mono.error(new RuntimeException("Supabase signin failed", e));
                 });
+    }
+
+    @PostMapping("/migrate-session")
+    public Mono<ResponseEntity<Void>> migrateSession(@Valid @RequestBody MigrationRequest migrationRequest) {
+        return supabaseAuthService.migrateSession(migrationRequest)
+                .thenReturn(ResponseEntity.ok().build());
     }
 }

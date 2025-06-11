@@ -23,15 +23,22 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            .csrf(csrf -> csrf.disable()) // Deshabilitar CSRF para APIs REST
-            .authorizeHttpRequests(authorize -> authorize
-                .requestMatchers("/api/public/**").permitAll() // Permitir acceso público a ciertos endpoints
-                .anyRequest().authenticated() // Requerir autenticación para cualquier otra solicitud
-            )
-            .sessionManagement(session -> session
-                .sessionCreationPolicy(SessionCreationPolicy.STATELESS) // No usar sesiones basadas en estado
-            )
-            .addFilterBefore(jwtTokenFilter, UsernamePasswordAuthenticationFilter.class); // Añadir el filtro JWT
+                .csrf(csrf -> csrf.disable()) // Deshabilitar CSRF para APIs REST
+                .authorizeHttpRequests(authorize -> authorize
+                        .requestMatchers("/api/public/**", "/api/appraisal/download-pdf/**").permitAll() // Permitir
+                                                                                                         // acceso
+                                                                                                         // público a
+                                                                                                         // ciertos
+                                                                                                         // endpoints,
+                                                                                                         // incluyendo
+                                                                                                         // la descarga
+                                                                                                         // de PDF
+                        .anyRequest().authenticated() // Requerir autenticación para cualquier otra solicitud
+                )
+                .sessionManagement(session -> session
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS) // No usar sesiones basadas en estado
+                )
+                .addFilterBefore(jwtTokenFilter, UsernamePasswordAuthenticationFilter.class); // Añadir el filtro JWT
 
         return http.build();
     }

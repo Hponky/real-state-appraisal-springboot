@@ -31,7 +31,10 @@ class AuthControllerTest {
     @BeforeEach
     void setUp() {
         authRequest = new AuthRequest("test@example.com", "password123");
-        authResponse = new AuthResponse("access_token_test", "refresh_token_test", 3600, "bearer", null); // Añadir 'null' para el campo 'user'
+        authResponse = new AuthResponse("access_token_test", "refresh_token_test", 3600, "bearer", null); // Añadir
+                                                                                                          // 'null' para
+                                                                                                          // el campo
+                                                                                                          // 'user'
     }
 
     @Test
@@ -55,9 +58,8 @@ class AuthControllerTest {
         Mono<ResponseEntity<AuthResponse>> responseMono = authController.signUp(authRequest);
 
         responseMono.subscribe(
-            responseEntity -> assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, responseEntity.getStatusCode()),
-            error -> assertEquals("Registration failed", error.getMessage())
-        );
+                responseEntity -> assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, responseEntity.getStatusCode()),
+                error -> assertEquals("Supabase signup failed", error.getMessage()));
     }
 
     @Test
@@ -81,8 +83,7 @@ class AuthControllerTest {
         Mono<ResponseEntity<AuthResponse>> responseMono = authController.signIn(authRequest);
 
         responseMono.subscribe(
-            responseEntity -> assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, responseEntity.getStatusCode()),
-            error -> assertEquals("Login failed", error.getMessage())
-        );
+                responseEntity -> assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, responseEntity.getStatusCode()),
+                error -> assertEquals("Supabase signin failed", error.getMessage()));
     }
 }

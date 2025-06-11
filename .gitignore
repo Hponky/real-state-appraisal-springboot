@@ -31,3 +31,5 @@ build/
 
 ### VS Code ###
 .vscode/
+*.log
+logs/spring-boot-app.log.2025-06-10.0.gz

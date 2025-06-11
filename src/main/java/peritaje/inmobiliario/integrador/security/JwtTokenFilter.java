@@ -41,8 +41,11 @@ public class JwtTokenFilter extends OncePerRequestFilter {
 
         if (jwtService.validateToken(token)) {
             String userId = jwtService.extractUserId(token);
-            List<GrantedAuthority> authorities = Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER")); // Roles can be extracted from JWT claims
-            UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(userId, null, authorities);
+            String username = jwtService.extractUsername(token);
+            List<GrantedAuthority> authorities = Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER"));
+            CustomUserDetails userDetails = new CustomUserDetails(userId, username, authorities);
+            UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(userDetails,
+                    null, authorities);
             SecurityContextHolder.getContext().setAuthentication(authentication);
         }
 
