@@ -2,13 +2,11 @@ package peritaje.inmobiliario.integrador.service;
 
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.thymeleaf.context.Context;
 import org.xhtmlrenderer.pdf.ITextRenderer;
-import peritaje.inmobiliario.integrador.dto.AppraisalResultDTO;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.util.Locale;
+import java.util.Map;
 
 @Service
 public class PdfGenerationService {
@@ -20,8 +18,8 @@ public class PdfGenerationService {
                 this.htmlGenerationService = htmlGenerationService;
         }
 
-        public byte[] generatePdf(AppraisalResultDTO appraisalResultDTO) throws IOException {
-                String htmlContent = htmlGenerationService.generateHtmlContent(appraisalResultDTO);
+        public byte[] generatePdf(String templateName, Map<String, Object> dataModel) throws IOException {
+                String htmlContent = htmlGenerationService.generateHtmlContent(templateName, dataModel);
 
                 ByteArrayOutputStream baos = new ByteArrayOutputStream();
                 ITextRenderer renderer = new ITextRenderer();

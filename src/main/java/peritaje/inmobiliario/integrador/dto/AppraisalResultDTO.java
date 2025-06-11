@@ -20,12 +20,10 @@ public class AppraisalResultDTO {
     @JsonProperty("potencial_valorizacion_con_mejoras_explicado")
     private PotencialValorizacionConMejorasExplicado potencial_valorizacion_con_mejoras_explicado;
 
-    // Este campo no se mapea directamente desde el JSON de entrada,
-    // sino que se usará para construir el JSON completo en el controlador.
-    // Se marca como @JsonIgnore para evitar que Jackson intente deserializarlo
-    // desde el JSON de entrada, ya que el JSON completo se construirá manualmente.
-    // @JsonIgnore
-    // private String appraisalDataJson;
+    @JsonProperty("analisis_cualitativo_arriendo")
+    private AnalisisCualitativoArriendo analisis_cualitativo_arriendo;
+    @JsonProperty("recomendaciones_proximos_pasos")
+    private List<String> recomendaciones_proximos_pasos;
 
     @Data
     @NoArgsConstructor
@@ -79,5 +77,14 @@ public class AppraisalResultDTO {
         private String justificacion_tecnica_original_relevancia;
         private Double incremento_estimado_canon_cop;
         private String justificacion_estimacion_incremento_economico;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class AnalisisCualitativoArriendo {
+        private List<String> factores_positivos_potencial;
+        private List<String> factores_a_considerar_o_mejorar;
+        private String comentario_mercado_general_ciudad;
     }
 }

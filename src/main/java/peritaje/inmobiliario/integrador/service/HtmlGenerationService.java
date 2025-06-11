@@ -1,7 +1,7 @@
 package peritaje.inmobiliario.integrador.service;
 
-import peritaje.inmobiliario.integrador.dto.AppraisalResultDTO;
+import java.util.Map;
 
 public interface HtmlGenerationService {
-    String generateHtmlContent(AppraisalResultDTO appraisalResultDTO);
+    String generateHtmlContent(String templateName, Map<String, Object> dataModel);
 }

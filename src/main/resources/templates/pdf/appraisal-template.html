@@ -115,33 +115,33 @@
 
     <div class="section">
         <h2>Información Básica</h2>
-        <p><strong>ID Solicitud:</strong> <span th:text="${appraisal.informacion_basica.requestId}"></span></p>
-        <p><strong>Ciudad:</strong> <span th:text="${appraisal.informacion_basica.ciudad}"></span></p>
-        <p><strong>Tipo de Inmueble:</strong> <span th:text="${appraisal.informacion_basica.tipo_inmueble}"></span></p>
-        <p><strong>Estrato:</strong> <span th:text="${appraisal.informacion_basica.estrato}"></span></p>
-        <p><strong>Área (m²):</strong> <span th:text="${appraisal.informacion_basica.area_usuario_m2}"></span></p>
+        <p><strong>ID Solicitud:</strong> <span th:text="${informacion_basica.requestId}"></span></p>
+        <p><strong>Ciudad:</strong> <span th:text="${informacion_basica.ciudad}"></span></p>
+        <p><strong>Tipo de Inmueble:</strong> <span th:text="${informacion_basica.tipo_inmueble}"></span></p>
+        <p><strong>Estrato:</strong> <span th:text="${informacion_basica.estrato}"></span></p>
+        <p><strong>Área (m²):</strong> <span th:text="${informacion_basica.area_usuario_m2}"></span></p>
     </div>
 
-    <div class="section" th:if="${appraisal.analisis_mercado != null}">
+    <div class="section" th:if="${analisis_mercado != null}">
         <h2>Análisis de Mercado</h2>
-        <p th:if="${appraisal.analisis_mercado.rango_arriendo_referencias_cop != null}">
-            <strong>Rango de Arriendo (COP):</strong> <span th:text="${appraisal.analisis_mercado.rango_arriendo_referencias_cop.min}"></span> - <span th:text="${appraisal.analisis_mercado.rango_arriendo_referencias_cop.max}"></span>
+        <p th:if="${analisis_mercado.rango_arriendo_referencias_cop != null}">
+            <strong>Rango de Arriendo (COP):</strong> <span th:text="${analisis_mercado.rango_arriendo_referencias_cop.min}"></span> - <span th:text="${analisis_mercado.rango_arriendo_referencias_cop.max}"></span>
         </p>
-        <p><strong>Observación del Mercado:</strong> <span th:text="${appraisal.analisis_mercado.observacion_mercado}"></span></p>
+        <p><strong>Observación del Mercado:</strong> <span th:text="${analisis_mercado.observacion_mercado}"></span></p>
     </div>
 
-    <div class="section" th:if="${appraisal.valoracion_arriendo_actual != null}">
+    <div class="section" th:if="${valoracion_arriendo_actual != null}">
         <h2>Valoración de Arriendo Actual</h2>
-        <p><strong>Estimación Canon Mensual (COP):</strong> <span th:text="${appraisal.valoracion_arriendo_actual.estimacion_canon_mensual_cop}"></span></p>
-        <p><strong>Justificación:</strong> <span th:text="${appraisal.valoracion_arriendo_actual.justificacion_estimacion_actual}"></span></p>
+        <p><strong>Estimación Canon Mensual (COP):</strong> <span th:text="${valoracion_arriendo_actual.estimacion_canon_mensual_cop}"></span></p>
+        <p><strong>Justificación:</strong> <span th:text="${valoracion_arriendo_actual.justificacion_estimacion_actual}"></span></p>
     </div>
 
-    <div class="section" th:if="${appraisal.potencial_valorizacion_con_mejoras_explicado != null}">
+    <div class="section" th:if="${potencial_valorizacion_con_mejoras_explicado != null}">
         <h2>Potencial de Valorización con Mejoras</h2>
-        <p><strong>Canon Potencial Total Estimado (COP):</strong> <span th:text="${appraisal.potencial_valorizacion_con_mejoras_explicado.canon_potencial_total_estimado_cop}"></span></p>
-        <p><strong>Comentario Estrategia:</strong> <span th:text="${appraisal.potencial_valorizacion_con_mejoras_explicado.comentario_estrategia_valorizacion}"></span></p>
+        <p><strong>Canon Potencial Total Estimado (COP):</strong> <span th:text="${potencial_valorizacion_con_mejoras_explicado.canon_potencial_total_estimado_cop}"></span></p>
+        <p><strong>Comentario Estrategia:</strong> <span th:text="${potencial_valorizacion_con_mejoras_explicado.comentario_estrategia_valorizacion}"></span></p>
 
-        <div th:if="${appraisal.potencial_valorizacion_con_mejoras_explicado.mejoras_con_impacto_detallado != null and not #lists.isEmpty(appraisal.potencial_valorizacion_con_mejoras_explicado.mejoras_con_impacto_detallado)}">
+        <div th:if="${potencial_valorizacion_con_mejoras_explicado.mejoras_con_impacto_detallado != null and not #lists.isEmpty(potencial_valorizacion_con_mejoras_explicado.mejoras_con_impacto_detallado)}">
             <h3>Mejoras Detalladas:</h3>
             <table>
                 <thead>
@@ -153,7 +153,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr th:each="mejora : ${appraisal.potencial_valorizacion_con_mejoras_explicado.mejoras_con_impacto_detallado}">
+                    <tr th:each="mejora : ${potencial_valorizacion_con_mejoras_explicado.mejoras_con_impacto_detallado}">
                         <td th:text="${mejora.recomendacion_tecnica_evaluada}"></td>
                         <td th:text="${mejora.justificacion_tecnica_original_relevancia}"></td>
                         <td th:text="${mejora.incremento_estimado_canon_cop}"></td>
@@ -162,6 +162,32 @@
                 </tbody>
             </table>
         </div>
+    </div>
+
+    <div class="section" th:if="${analisis_cualitativo_arriendo != null}">
+        <h2>Análisis Cualitativo de Arriendo</h2>
+        <div th:if="${analisis_cualitativo_arriendo.factores_positivos_potencial != null and not #lists.isEmpty(analisis_cualitativo_arriendo.factores_positivos_potencial)}">
+            <h3>Factores Positivos y Potencial:</h3>
+            <ul>
+                <li th:each="factor : ${analisis_cualitativo_arriendo.factores_positivos_potencial}" th:text="${factor}"></li>
+            </ul>
+        </div>
+        <div th:if="${analisis_cualitativo_arriendo.factores_a_considerar_o_mejorar != null and not #lists.isEmpty(analisis_cualitativo_arriendo.factores_a_considerar_o_mejorar)}">
+            <h3>Factores a Considerar o Mejorar:</h3>
+            <ul>
+                <li th:each="factor : ${analisis_cualitativo_arriendo.factores_a_considerar_o_mejorar}" th:text="${factor}"></li>
+            </ul>
+        </div>
+        <p th:if="${analisis_cualitativo_arriendo.comentario_mercado_general_ciudad != null}">
+            <strong>Comentario General del Mercado:</strong> <span th:text="${analisis_cualitativo_arriendo.comentario_mercado_general_ciudad}"></span>
+        </p>
+    </div>
+
+    <div class="section" th:if="${recomendaciones_proximos_pasos != null and not #lists.isEmpty(recomendaciones_proximos_pasos)}">
+        <h2>Recomendaciones y Próximos Pasos</h2>
+        <ul>
+            <li th:each="recomendacion : ${recomendaciones_proximos_pasos}" th:text="${recomendacion}"></li>
+        </ul>
     </div>
 
     <div class="footer">

@@ -14,6 +14,7 @@ import peritaje.inmobiliario.integrador.domain.AppraisalResult;
 import peritaje.inmobiliario.integrador.service.AppraisalResultService;
 import peritaje.inmobiliario.integrador.service.PdfGenerationService;
 import java.util.List;
+import java.util.Map; // Importar Map
 import java.util.Optional;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -82,7 +83,12 @@ public class AppraisalController {
     @PostMapping("/download-pdf")
     public ResponseEntity<byte[]> downloadPdf(@RequestBody AppraisalResultDTO appraisalResultDTO) {
         try {
-            byte[] pdfBytes = pdfGenerationService.generatePdf(appraisalResultDTO);
+            logger.info("Received appraisalResultDTO for PDF generation: {}", appraisalResultDTO);
+            // Convert AppraisalResultDTO to a Map for the generic PDF generation service
+            @SuppressWarnings("unchecked")
+            Map<String, Object> dataModel = objectMapper.convertValue(appraisalResultDTO, Map.class);
+
+            byte[] pdfBytes = pdfGenerationService.generatePdf("pdf/appraisal-template", dataModel);
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_PDF);

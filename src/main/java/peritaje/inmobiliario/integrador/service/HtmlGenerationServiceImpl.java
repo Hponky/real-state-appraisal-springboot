@@ -3,7 +3,7 @@ package peritaje.inmobiliario.integrador.service;
 import org.springframework.stereotype.Service;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
-import peritaje.inmobiliario.integrador.dto.AppraisalResultDTO;
+import java.util.Map;
 
 @Service
 public class HtmlGenerationServiceImpl implements HtmlGenerationService {
@@ -15,11 +15,9 @@ public class HtmlGenerationServiceImpl implements HtmlGenerationService {
     }
 
     @Override
-    public String generateHtmlContent(AppraisalResultDTO appraisalResultDTO) {
+    public String generateHtmlContent(String templateName, Map<String, Object> dataModel) {
         Context context = new Context();
-        context.setVariable("appraisal", appraisalResultDTO);
-        // Asume que la plantilla se encuentra en
-        // src/main/resources/templates/pdf/appraisal-template.html
-        return templateEngine.process("pdf/appraisal-template", context);
+        context.setVariables(dataModel);
+        return templateEngine.process(templateName, context);
     }
 }
