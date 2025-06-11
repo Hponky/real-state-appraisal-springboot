@@ -41,7 +41,7 @@ public class AppraisalController {
         logger.info("AppraisalController initialized.");
     }
 
-    @PostMapping("/save")
+    @PostMapping("/save-result")
     public ResponseEntity<AppraisalResult> saveAppraisalResult(
             @Valid @RequestBody SaveAppraisalRequestDTO requestDTO) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -52,7 +52,8 @@ public class AppraisalController {
         try {
             CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
             AppraisalResult appraisalResult = new AppraisalResult();
-            appraisalResult.setAppraisalData(requestDTO.getAppraisalData()); // Asignar el JSON completo
+            // Convertir JsonNode a String antes de asignar
+            appraisalResult.setAppraisalData(objectMapper.writeValueAsString(requestDTO.getAppraisalData()));
             appraisalResult.setUserId(userDetails.getUserId()); // Asignar userId del usuario autenticado
             appraisalResult.setAnonymousSessionId(null); // Siempre null si es un usuario autenticado
             appraisalResult.setCreatedAt(java.time.LocalDateTime.now()); // Forzar la asignación de la fecha de creación

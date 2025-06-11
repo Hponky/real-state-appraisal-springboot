@@ -1,5 +1,6 @@
 package peritaje.inmobiliario.integrador.dto;
 
+import com.fasterxml.jackson.databind.JsonNode; // Importar JsonNode
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
@@ -10,5 +11,5 @@ import lombok.AllArgsConstructor;
 public class SaveAppraisalRequestDTO {
     private String userId;
     private String anonymousSessionId;
-    private String appraisalData; // JSON completo como String
+    private JsonNode appraisalData; // JSON completo como JsonNode
 }
