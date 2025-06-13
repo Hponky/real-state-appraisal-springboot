@@ -8,6 +8,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class PuntoCriticoDTO {
-    private String aspecto_legal_relevante;
-    private String descripcion_implicacion_riesgo;
+    private String titulo;
+    private String descripcion;
 }

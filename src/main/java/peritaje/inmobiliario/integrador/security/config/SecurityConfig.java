@@ -25,14 +25,14 @@ public class SecurityConfig {
         http
                 .csrf(csrf -> csrf.disable()) // Deshabilitar CSRF para APIs REST
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/api/public/**", "/api/appraisal/download-pdf").permitAll() // Permitir
-                                                                                                      // acceso
-                                                                                                      // público a
-                                                                                                      // ciertos
-                                                                                                      // endpoints,
-                                                                                                      // incluyendo
-                                                                                                      // la descarga
-                                                                                                      // de PDF
+                        .requestMatchers("/api/public/**", "/api/appraisal/download-pdf/**").permitAll() // Permitir
+                                                                                                         // acceso
+                                                                                                         // público a
+                                                                                                         // ciertos
+                                                                                                         // endpoints,
+                                                                                                         // incluyendo
+                                                                                                         // la descarga
+                                                                                                         // de PDF
                         .anyRequest().authenticated() // Requerir autenticación para cualquier otra solicitud
                 )
                 .sessionManagement(session -> session
