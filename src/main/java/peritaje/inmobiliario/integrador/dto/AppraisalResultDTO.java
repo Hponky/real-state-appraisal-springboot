@@ -33,6 +33,7 @@ public class AppraisalResultDTO {
     public static class InformacionBasica {
         private String requestId;
         private String ciudad;
+        private String address;
         private String tipo_inmueble;
         private String estrato;
         private Double area_usuario_m2;

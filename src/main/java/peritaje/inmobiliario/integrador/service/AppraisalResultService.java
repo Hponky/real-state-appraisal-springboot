@@ -153,6 +153,7 @@ public class AppraisalResultService {
             infoBasica.setRequestId(appraisalResult.getRequestId()); // Obtener requestId directamente de la entidad
             if (!initialDataNode.isMissingNode()) {
                 infoBasica.setCiudad(initialDataNode.path("ciudad").asText(null));
+                infoBasica.setAddress(initialDataNode.path("address").asText(null)); // Añadir la dirección
                 infoBasica.setTipo_inmueble(initialDataNode.path("tipo_inmueble").asText(null));
                 infoBasica.setEstrato(initialDataNode.path("estrato").asText(null));
                 infoBasica.setArea_usuario_m2(initialDataNode.path("area_usuario_m2").asDouble(0.0));
