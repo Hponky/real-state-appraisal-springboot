@@ -1,5 +1,7 @@
 package peritaje.inmobiliario.integrador.dto;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
+
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -8,6 +10,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class DocumentoClaveDTO {
-    private String nombre;
-    private String estado;
+    @JsonAlias("nombre")
+    private String documento;
 }

@@ -1,21 +1,22 @@
 package peritaje.inmobiliario.integrador.service;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import peritaje.inmobiliario.integrador.dto.AnalisisLegalArrendamientoDTO;
-import peritaje.inmobiliario.integrador.dto.AppraisalResultDTO;
-import peritaje.inmobiliario.integrador.dto.DocumentoClaveDTO;
-import peritaje.inmobiliario.integrador.dto.PuntoCriticoDTO;
 
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import peritaje.inmobiliario.integrador.domain.AppraisalResult;
+import peritaje.inmobiliario.integrador.dto.AnalisisLegalArrendamientoDTO;
+import peritaje.inmobiliario.integrador.dto.AppraisalResultDTO;
+import peritaje.inmobiliario.integrador.dto.DocumentoClaveDTO;
+import peritaje.inmobiliario.integrador.dto.PuntoCriticoDTO;
 import peritaje.inmobiliario.integrador.repository.AppraisalResultRepository;
 import peritaje.inmobiliario.integrador.security.CustomUserDetails;
 
@@ -139,16 +140,23 @@ public class AppraisalResultService {
             JsonNode rootNode = objectMapper.readTree(rawAppraisalData);
 
             // Populate InformacionBasica
-            JsonNode infoBasicaNode = rootNode.path("informacion_basica");
-            if (!infoBasicaNode.isMissingNode()) {
-                AppraisalResultDTO.InformacionBasica infoBasica = new AppraisalResultDTO.InformacionBasica();
-                infoBasica.setRequestId(infoBasicaNode.path("requestId").asText(null));
-                infoBasica.setCiudad(infoBasicaNode.path("ciudad").asText(null));
-                infoBasica.setTipo_inmueble(infoBasicaNode.path("tipo_inmueble").asText(null));
-                infoBasica.setEstrato(infoBasicaNode.path("estrato").asText(null));
-                infoBasica.setArea_usuario_m2(infoBasicaNode.path("area_usuario_m2").asDouble(0.0));
-                dto.setInformacion_basica(infoBasica);
+            AppraisalResultDTO.InformacionBasica infoBasica = new AppraisalResultDTO.InformacionBasica();
+            JsonNode initialDataNode = rootNode.path("initial_data");
+            if (!initialDataNode.isMissingNode()) {
+                infoBasica.setRequestId(initialDataNode.path("requestId").asText(appraisalResult.getRequestId()));
+                infoBasica.setCiudad(initialDataNode.path("ciudad").asText("N/A"));
+                infoBasica.setTipo_inmueble(initialDataNode.path("tipo_inmueble").asText("N/A"));
+                infoBasica.setEstrato(initialDataNode.path("estrato").asText("N/A"));
+                infoBasica.setArea_usuario_m2(initialDataNode.path("area_usuario_m2").asDouble(0.0));
+            } else {
+                // Si initial_data no existe en el JSON, usar el requestId de la entidad
+                infoBasica.setRequestId(appraisalResult.getRequestId());
+                infoBasica.setCiudad("N/A");
+                infoBasica.setTipo_inmueble("N/A");
+                infoBasica.setEstrato("N/A");
+                infoBasica.setArea_usuario_m2(0.0);
             }
+            dto.setInformacion_basica(infoBasica);
 
             // Populate AnalisisMercado
             JsonNode analisisMercadoNode = rootNode.path("analisis_mercado");
@@ -259,8 +267,10 @@ public class AppraisalResultService {
                     List<PuntoCriticoDTO> puntosCriticos = new ArrayList<>();
                     for (JsonNode puntoNode : puntosCriticosNode) {
                         PuntoCriticoDTO punto = new PuntoCriticoDTO();
-                        punto.setTitulo(puntoNode.path("titulo").asText(null));
-                        punto.setDescripcion(puntoNode.path("descripcion").asText(null));
+                        // Mapear campos del JSON (frontend) a los campos del DTO (backend)
+                        punto.setAspecto_legal_relevante(puntoNode.path("aspecto_legal_relevante").asText(null));
+                        punto.setDescripcion_implicacion_riesgo(
+                                puntoNode.path("descripcion_implicacion_riesgo").asText(null));
                         puntosCriticos.add(punto);
                     }
                     analisisLegal.setPuntos_criticos_y_riesgos(puntosCriticos);
@@ -271,8 +281,9 @@ public class AppraisalResultService {
                     List<DocumentoClaveDTO> documentosClave = new ArrayList<>();
                     for (JsonNode docNode : documentosClaveNode) {
                         DocumentoClaveDTO documento = new DocumentoClaveDTO();
-                        documento.setNombre(docNode.path("nombre").asText(null));
-                        documento.setEstado(docNode.path("estado").asText(null));
+                        // Mapear campo 'documento' del JSON (frontend) a 'documento' en el DTO
+                        // (backend)
+                        documento.setDocumento(docNode.path("documento").asText(null));
                         documentosClave.add(documento);
                     }
                     analisisLegal.setDocumentacion_clave_a_revisar_o_completar(documentosClave);

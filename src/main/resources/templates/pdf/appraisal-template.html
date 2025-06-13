@@ -194,14 +194,14 @@
             <table>
                 <thead>
                     <tr>
-                        <th>Título</th>
-                        <th>Descripción</th>
+                        <th>Aspecto Legal Relevante</th>
+                        <th>Descripción Implicación Riesgo</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr th:each="punto : ${analisis_legal_arrendamiento.puntos_criticos_y_riesgos}">
-                        <td th:text="${punto.titulo}"></td>
-                        <td th:text="${punto.descripcion}"></td>
+                        <td th:text="${punto.aspecto_legal_relevante}"></td>
+                        <td th:text="${punto.descripcion_implicacion_riesgo}"></td>
                     </tr>
                 </tbody>
             </table>
@@ -212,14 +212,12 @@
             <table>
                 <thead>
                     <tr>
-                        <th>Nombre</th>
-                        <th>Estado</th>
+                        <th>Documento</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr th:each="documento : ${analisis_legal_arrendamiento.documentacion_clave_a_revisar_o_completar}">
-                        <td th:text="${documento.nombre}"></td>
-                        <td th:text="${documento.estado}"></td>
+                        <td th:text="${documento.documento}"></td>
                     </tr>
                 </tbody>
             </table>
