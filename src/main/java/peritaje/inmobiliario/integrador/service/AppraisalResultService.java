@@ -1,21 +1,22 @@
 package peritaje.inmobiliario.integrador.service;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import peritaje.inmobiliario.integrador.dto.AnalisisLegalArrendamientoDTO;
-import peritaje.inmobiliario.integrador.dto.AppraisalResultDTO;
-import peritaje.inmobiliario.integrador.dto.DocumentoClaveDTO;
-import peritaje.inmobiliario.integrador.dto.PuntoCriticoDTO;
 
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import peritaje.inmobiliario.integrador.domain.AppraisalResult;
+import peritaje.inmobiliario.integrador.dto.AnalisisLegalArrendamientoDTO;
+import peritaje.inmobiliario.integrador.dto.AppraisalResultDTO;
+import peritaje.inmobiliario.integrador.dto.DocumentoClaveDTO;
+import peritaje.inmobiliario.integrador.dto.PuntoCriticoDTO;
 import peritaje.inmobiliario.integrador.repository.AppraisalResultRepository;
 import peritaje.inmobiliario.integrador.security.CustomUserDetails;
 
@@ -109,15 +110,6 @@ public class AppraisalResultService {
         return List.of(); // Retorna una lista vacía si no hay usuario autenticado
     }
 
-    public Optional<AppraisalResult> getAppraisalResultByIdAndCurrentUser(Long id) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication != null && authentication.getPrincipal() instanceof CustomUserDetails) {
-            CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
-            return appraisalResultRepository.findByIdAndUserId(id, userDetails.getUserId());
-        }
-        return Optional.empty();
-    }
-
     public Optional<AppraisalResult> getAppraisalResultByRequestIdAndCurrentUser(String requestId) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication != null && authentication.getPrincipal() instanceof CustomUserDetails) {
@@ -126,6 +118,7 @@ public class AppraisalResultService {
         }
         return Optional.empty();
     }
+
 
     public List<AppraisalResult> getAppraisalResultsByAnonymousSessionId(String anonymousSessionId) {
         return appraisalResultRepository.findByAnonymousSessionId(anonymousSessionId);
@@ -144,6 +137,7 @@ public class AppraisalResultService {
     public AppraisalResultDTO mapToDTO(AppraisalResult appraisalResult) {
         AppraisalResultDTO dto = new AppraisalResultDTO();
         try {
+            dto.setId(appraisalResult.getId()); // Assign the ID
             String rawAppraisalData = appraisalResult.getAppraisalData();
             JsonNode rootNode = objectMapper.readTree(rawAppraisalData);
 

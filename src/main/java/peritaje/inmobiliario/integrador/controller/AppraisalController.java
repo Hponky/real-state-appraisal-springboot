@@ -1,27 +1,35 @@
 package peritaje.inmobiliario.integrador.controller;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import jakarta.validation.Valid;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.*;
-import peritaje.inmobiliario.integrador.dto.AppraisalResultDTO;
-import peritaje.inmobiliario.integrador.dto.MigrationRequest;
-import peritaje.inmobiliario.integrador.dto.SaveAppraisalRequestDTO; // Importar el nuevo DTO
-import peritaje.inmobiliario.integrador.domain.AppraisalResult;
-import peritaje.inmobiliario.integrador.service.AppraisalResultService;
-import peritaje.inmobiliario.integrador.service.PdfGenerationService;
 import java.util.List;
-import java.util.Map; // Importar Map
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.security.core.context.SecurityContextHolder; // Importar SecurityContextHolder
-import peritaje.inmobiliario.integrador.security.CustomUserDetails; // Importar CustomUserDetails
+import java.util.Map;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.bind.annotation.GetMapping; // Importar el nuevo DTO
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController; // Importar Map
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode; // Importar SecurityContextHolder
+
+import jakarta.validation.Valid; // Importar CustomUserDetails
+import peritaje.inmobiliario.integrador.domain.AppraisalResult;
+import peritaje.inmobiliario.integrador.dto.AppraisalResultDTO;
+import peritaje.inmobiliario.integrador.dto.MigrationRequest;
+import peritaje.inmobiliario.integrador.dto.SaveAppraisalRequestDTO;
+import peritaje.inmobiliario.integrador.security.CustomUserDetails;
+import peritaje.inmobiliario.integrador.service.AppraisalResultService;
+import peritaje.inmobiliario.integrador.service.PdfGenerationService;
 
 @RestController
 @RequestMapping("/api/appraisal")
@@ -92,8 +100,7 @@ public class AppraisalController {
     public ResponseEntity<byte[]> downloadPdf(@RequestParam("appraisalId") String appraisalId) {
         try {
             logger.info("Received request for PDF generation for appraisalId: {}", appraisalId);
-            Long id = Long.parseLong(appraisalId); // Convertir el appraisalId a Long
-            AppraisalResult appraisalResult = appraisalResultService.getAppraisalResultByIdAndCurrentUser(id)
+            AppraisalResult appraisalResult = appraisalResultService.getAppraisalResultByRequestIdAndCurrentUser(appraisalId)
                     .orElse(null); // Usar getAppraisalResultByIdAndCurrentUser
             if (appraisalResult == null) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new byte[0]);

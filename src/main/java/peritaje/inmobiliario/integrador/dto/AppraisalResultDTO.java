@@ -1,16 +1,18 @@
 package peritaje.inmobiliario.integrador.dto;
 
+import java.util.List;
+
 import com.fasterxml.jackson.annotation.JsonProperty;
+
+import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
-
-import java.util.List;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class AppraisalResultDTO {
+    private Long id; // Add this field
     @JsonProperty("informacion_basica")
     private InformacionBasica informacion_basica;
     @JsonProperty("analisis_mercado")
