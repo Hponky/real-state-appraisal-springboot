@@ -183,6 +183,56 @@
         </p>
     </div>
 
+    <div class="section" th:if="${analisis_legal_arrendamiento != null}">
+        <h2>Análisis Legal de Arrendamiento</h2>
+        <p><strong>Tipo de Uso Principal Analizado:</strong> <span th:text="${analisis_legal_arrendamiento.tipo_uso_principal_analizado}"></span></p>
+        <p><strong>Viabilidad General Preliminar:</strong> <span th:text="${analisis_legal_arrendamiento.viabilidad_general_preliminar}"></span></p>
+        <p><strong>Resumen Ejecutivo Legal:</strong> <span th:text="${analisis_legal_arrendamiento.resumen_ejecutivo_legal}"></span></p>
+
+        <div th:if="${analisis_legal_arrendamiento.puntos_criticos_y_riesgos != null and not #lists.isEmpty(analisis_legal_arrendamiento.puntos_criticos_y_riesgos)}">
+            <h3>Puntos Críticos y Riesgos:</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Título</th>
+                        <th>Descripción</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="punto : ${analisis_legal_arrendamiento.puntos_criticos_y_riesgos}">
+                        <td th:text="${punto.titulo}"></td>
+                        <td th:text="${punto.descripcion}"></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div th:if="${analisis_legal_arrendamiento.documentacion_clave_a_revisar_o_completar != null and not #lists.isEmpty(analisis_legal_arrendamiento.documentacion_clave_a_revisar_o_completar)}">
+            <h3>Documentación Clave a Revisar o Completar:</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="documento : ${analisis_legal_arrendamiento.documentacion_clave_a_revisar_o_completar}">
+                        <td th:text="${documento.nombre}"></td>
+                        <td th:text="${documento.estado}"></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div th:if="${analisis_legal_arrendamiento.consideraciones_contractuales_sugeridas != null and not #lists.isEmpty(analisis_legal_arrendamiento.consideraciones_contractuales_sugeridas)}">
+            <h3>Consideraciones Contractuales Sugeridas:</h3>
+            <ul>
+                <li th:each="consideracion : ${analisis_legal_arrendamiento.consideraciones_contractuales_sugeridas}" th:text="${consideracion}"></li>
+            </ul>
+        </div>
+    </div>
+
     <div class="section" th:if="${recomendaciones_proximos_pasos != null and not #lists.isEmpty(recomendaciones_proximos_pasos)}">
         <h2>Recomendaciones y Próximos Pasos</h2>
         <ul>

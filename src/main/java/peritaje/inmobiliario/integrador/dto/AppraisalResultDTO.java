@@ -24,6 +24,8 @@ public class AppraisalResultDTO {
     private AnalisisCualitativoArriendo analisis_cualitativo_arriendo;
     @JsonProperty("recomendaciones_proximos_pasos")
     private List<String> recomendaciones_proximos_pasos;
+    @JsonProperty("analisis_legal_arrendamiento")
+    private AnalisisLegalArrendamientoDTO analisisLegalArrendamiento;
 
     @Data
     @NoArgsConstructor

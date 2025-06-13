@@ -2,8 +2,13 @@ package peritaje.inmobiliario.integrador.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import peritaje.inmobiliario.integrador.dto.AnalisisLegalArrendamientoDTO;
+import peritaje.inmobiliario.integrador.dto.AppraisalResultDTO;
+import peritaje.inmobiliario.integrador.dto.DocumentoClaveDTO;
+import peritaje.inmobiliario.integrador.dto.PuntoCriticoDTO;
 
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -72,7 +77,25 @@ public class AppraisalResultService {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication != null && authentication.getPrincipal() instanceof CustomUserDetails) {
             CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
-            return appraisalResultRepository.findByUserId(userDetails.getUserId());
+            List<AppraisalResult> results = appraisalResultRepository.findByUserId(userDetails.getUserId());
+            results.forEach(result -> {
+                System.out.println("DEBUG: AppraisalResult ID: " + result.getId()
+                        + ", Raw appraisalData from DB: " + result.getAppraisalData());
+                try {
+                    JsonNode rootNode = objectMapper.readTree(result.getAppraisalData());
+                    JsonNode initialDataNode = rootNode.path("initial_data");
+                    if (!initialDataNode.isMissingNode()) {
+                        System.out.println("DEBUG: Extracted initial_data from DB: " + initialDataNode.toString());
+                    } else {
+                        System.out.println("DEBUG: initial_data node is missing in appraisalData from DB for ID: "
+                                + result.getId());
+                    }
+                } catch (Exception e) {
+                    System.err.println("DEBUG: Error parsing appraisalData for logging initial_data for ID: "
+                            + result.getId() + " - " + e.getMessage());
+                }
+            });
+            return results;
         }
         return List.of(); // Retorna una lista vacía si no hay usuario autenticado
     }
@@ -107,5 +130,171 @@ public class AppraisalResultService {
             result.setAnonymousSessionId(null); // Clear anonymous session ID after migration
             appraisalResultRepository.save(result);
         }
+    }
+
+    public AppraisalResultDTO mapToDTO(AppraisalResult appraisalResult) {
+        AppraisalResultDTO dto = new AppraisalResultDTO();
+        try {
+            String rawAppraisalData = appraisalResult.getAppraisalData();
+            JsonNode rootNode = objectMapper.readTree(rawAppraisalData);
+
+            // Populate InformacionBasica
+            JsonNode infoBasicaNode = rootNode.path("informacion_basica");
+            if (!infoBasicaNode.isMissingNode()) {
+                AppraisalResultDTO.InformacionBasica infoBasica = new AppraisalResultDTO.InformacionBasica();
+                infoBasica.setRequestId(infoBasicaNode.path("requestId").asText(null));
+                infoBasica.setCiudad(infoBasicaNode.path("ciudad").asText(null));
+                infoBasica.setTipo_inmueble(infoBasicaNode.path("tipo_inmueble").asText(null));
+                infoBasica.setEstrato(infoBasicaNode.path("estrato").asText(null));
+                infoBasica.setArea_usuario_m2(infoBasicaNode.path("area_usuario_m2").asDouble(0.0));
+                dto.setInformacion_basica(infoBasica);
+            }
+
+            // Populate AnalisisMercado
+            JsonNode analisisMercadoNode = rootNode.path("analisis_mercado");
+            if (!analisisMercadoNode.isMissingNode()) {
+                AppraisalResultDTO.AnalisisMercado analisisMercado = new AppraisalResultDTO.AnalisisMercado();
+                JsonNode rangoArriendoNode = analisisMercadoNode.path("rango_arriendo_referencias_cop");
+                if (!rangoArriendoNode.isMissingNode()) {
+                    AppraisalResultDTO.RangoArriendoReferenciasCop rangoArriendo = new AppraisalResultDTO.RangoArriendoReferenciasCop();
+                    rangoArriendo.setMin(rangoArriendoNode.path("min").asDouble(0.0));
+                    rangoArriendo.setMax(rangoArriendoNode.path("max").asDouble(0.0));
+                    analisisMercado.setRango_arriendo_referencias_cop(rangoArriendo);
+                }
+                analisisMercado.setObservacion_mercado(analisisMercadoNode.path("observacion_mercado").asText(null));
+                dto.setAnalisis_mercado(analisisMercado);
+            }
+
+            // Populate ValoracionArriendoActual
+            JsonNode valoracionArriendoActualNode = rootNode.path("valoracion_arriendo_actual");
+            if (!valoracionArriendoActualNode.isMissingNode()) {
+                AppraisalResultDTO.ValoracionArriendoActual valoracionArriendoActual = new AppraisalResultDTO.ValoracionArriendoActual();
+                valoracionArriendoActual.setEstimacion_canon_mensual_cop(
+                        valoracionArriendoActualNode.path("estimacion_canon_mensual_cop").asDouble(0.0));
+                valoracionArriendoActual.setJustificacion_estimacion_actual(
+                        valoracionArriendoActualNode.path("justificacion_estimacion_actual").asText(null));
+                dto.setValoracion_arriendo_actual(valoracionArriendoActual);
+            }
+
+            // Populate PotencialValorizacionConMejorasExplicado
+            JsonNode potencialValorizacionNode = rootNode.path("potencial_valorizacion_con_mejoras_explicado");
+            if (!potencialValorizacionNode.isMissingNode()) {
+                AppraisalResultDTO.PotencialValorizacionConMejorasExplicado potencialValorizacion = new AppraisalResultDTO.PotencialValorizacionConMejorasExplicado();
+                potencialValorizacion.setCanon_potencial_total_estimado_cop(
+                        potencialValorizacionNode.path("canon_potencial_total_estimado_cop").asDouble(0.0));
+                potencialValorizacion.setComentario_estrategia_valorizacion(
+                        potencialValorizacionNode.path("comentario_estrategia_valorizacion").asText(null));
+
+                JsonNode mejorasNode = potencialValorizacionNode.path("mejoras_con_impacto_detallado");
+                if (mejorasNode.isArray()) {
+                    List<AppraisalResultDTO.MejoraConImpactoDetallado> mejoras = new ArrayList<>();
+                    for (JsonNode mejoraNode : mejorasNode) {
+                        AppraisalResultDTO.MejoraConImpactoDetallado mejora = new AppraisalResultDTO.MejoraConImpactoDetallado();
+                        mejora.setRecomendacion_tecnica_evaluada(
+                                mejoraNode.path("recomendacion_tecnica_evaluada").asText(null));
+                        mejora.setJustificacion_tecnica_original_relevancia(
+                                mejoraNode.path("justificacion_tecnica_original_relevancia").asText(null));
+                        mejora.setIncremento_estimado_canon_cop(
+                                mejoraNode.path("incremento_estimado_canon_cop").asDouble(0.0));
+                        mejora.setJustificacion_estimacion_incremento_economico(
+                                mejoraNode.path("justificacion_estimacion_incremento_economico").asText(null));
+                        mejoras.add(mejora);
+                    }
+                    potencialValorizacion.setMejoras_con_impacto_detallado(mejoras);
+                }
+                dto.setPotencial_valorizacion_con_mejoras_explicado(potencialValorizacion);
+            }
+
+            // Populate AnalisisCualitativoArriendo
+            JsonNode analisisCualitativoNode = rootNode.path("analisis_cualitativo_arriendo");
+            if (!analisisCualitativoNode.isMissingNode()) {
+                AppraisalResultDTO.AnalisisCualitativoArriendo analisisCualitativo = new AppraisalResultDTO.AnalisisCualitativoArriendo();
+
+                JsonNode factoresPositivosNode = analisisCualitativoNode.path("factores_positivos_potencial");
+                if (factoresPositivosNode.isArray()) {
+                    List<String> factoresPositivos = new ArrayList<>();
+                    for (JsonNode factor : factoresPositivosNode) {
+                        factoresPositivos.add(factor.asText());
+                    }
+                    analisisCualitativo.setFactores_positivos_potencial(factoresPositivos);
+                }
+
+                JsonNode factoresConsiderarNode = analisisCualitativoNode.path("factores_a_considerar_o_mejorar");
+                if (factoresConsiderarNode.isArray()) {
+                    List<String> factoresConsiderar = new ArrayList<>();
+                    for (JsonNode factor : factoresConsiderarNode) {
+                        factoresConsiderar.add(factor.asText());
+                    }
+                    analisisCualitativo.setFactores_a_considerar_o_mejorar(factoresConsiderar);
+                }
+                analisisCualitativo.setComentario_mercado_general_ciudad(
+                        analisisCualitativoNode.path("comentario_mercado_general_ciudad").asText(null));
+                dto.setAnalisis_cualitativo_arriendo(analisisCualitativo);
+            }
+
+            // Populate recomendaciones_proximos_pasos
+            JsonNode recomendacionesNode = rootNode.path("recomendaciones_proximos_pasos");
+            if (recomendacionesNode.isArray()) {
+                List<String> recomendaciones = new ArrayList<>();
+                for (JsonNode recomendacion : recomendacionesNode) {
+                    recomendaciones.add(recomendacion.asText());
+                }
+                dto.setRecomendaciones_proximos_pasos(recomendaciones);
+            }
+
+            // Populate AnalisisLegalArrendamientoDTO
+            JsonNode analisisLegalNode = rootNode.path("analisis_legal_arrendamiento");
+            if (!analisisLegalNode.isMissingNode()) {
+                AnalisisLegalArrendamientoDTO analisisLegal = new AnalisisLegalArrendamientoDTO();
+                analisisLegal.setRequestId(analisisLegalNode.path("requestId").asText(null));
+                analisisLegal.setTipo_uso_principal_analizado(
+                        analisisLegalNode.path("tipo_uso_principal_analizado").asText(null));
+                analisisLegal.setViabilidad_general_preliminar(
+                        analisisLegalNode.path("viabilidad_general_preliminar").asText(null));
+                analisisLegal
+                        .setResumen_ejecutivo_legal(analisisLegalNode.path("resumen_ejecutivo_legal").asText(null));
+
+                JsonNode puntosCriticosNode = analisisLegalNode.path("puntos_criticos_y_riesgos");
+                if (puntosCriticosNode.isArray()) {
+                    List<PuntoCriticoDTO> puntosCriticos = new ArrayList<>();
+                    for (JsonNode puntoNode : puntosCriticosNode) {
+                        PuntoCriticoDTO punto = new PuntoCriticoDTO();
+                        punto.setTitulo(puntoNode.path("titulo").asText(null));
+                        punto.setDescripcion(puntoNode.path("descripcion").asText(null));
+                        puntosCriticos.add(punto);
+                    }
+                    analisisLegal.setPuntos_criticos_y_riesgos(puntosCriticos);
+                }
+
+                JsonNode documentosClaveNode = analisisLegalNode.path("documentacion_clave_a_revisar_o_completar");
+                if (documentosClaveNode.isArray()) {
+                    List<DocumentoClaveDTO> documentosClave = new ArrayList<>();
+                    for (JsonNode docNode : documentosClaveNode) {
+                        DocumentoClaveDTO documento = new DocumentoClaveDTO();
+                        documento.setNombre(docNode.path("nombre").asText(null));
+                        documento.setEstado(docNode.path("estado").asText(null));
+                        documentosClave.add(documento);
+                    }
+                    analisisLegal.setDocumentacion_clave_a_revisar_o_completar(documentosClave);
+                }
+
+                JsonNode consideracionesContractualesNode = analisisLegalNode
+                        .path("consideraciones_contractuales_sugeridas");
+                if (consideracionesContractualesNode.isArray()) {
+                    List<String> consideraciones = new ArrayList<>();
+                    for (JsonNode consideracion : consideracionesContractualesNode) {
+                        consideraciones.add(consideracion.asText());
+                    }
+                    analisisLegal.setConsideraciones_contractuales_sugeridas(consideraciones);
+                }
+                dto.setAnalisisLegalArrendamiento(analisisLegal);
+            }
+
+        } catch (Exception e) {
+            System.err.println("Error al parsear appraisalData a AppraisalResultDTO: " + e.getMessage());
+            // Dependiendo del manejo de errores deseado, podrías lanzar una excepción
+            // personalizada o devolver un DTO parcial/nulo.
+        }
+        return dto;
     }
 }
