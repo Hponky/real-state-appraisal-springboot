@@ -65,6 +65,15 @@ public class AppraisalResultService {
         return appraisalResultRepository.save(appraisalResult);
     }
 
+    public AppraisalResult getAppraisalResultByRequestId(String requestId) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.getPrincipal() instanceof CustomUserDetails) {
+            CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+            return appraisalResultRepository.findByRequestIdAndUserId(requestId, userDetails.getUserId()).orElse(null);
+        }
+        return null; // O lanzar una excepción si no hay usuario autenticado
+    }
+
     public Optional<AppraisalResult> getAppraisalResultById(Long id) {
         return appraisalResultRepository.findById(id);
     }
@@ -139,16 +148,16 @@ public class AppraisalResultService {
             JsonNode rootNode = objectMapper.readTree(rawAppraisalData);
 
             // Populate InformacionBasica
-            JsonNode infoBasicaNode = rootNode.path("informacion_basica");
-            if (!infoBasicaNode.isMissingNode()) {
-                AppraisalResultDTO.InformacionBasica infoBasica = new AppraisalResultDTO.InformacionBasica();
-                infoBasica.setRequestId(infoBasicaNode.path("requestId").asText(null));
-                infoBasica.setCiudad(infoBasicaNode.path("ciudad").asText(null));
-                infoBasica.setTipo_inmueble(infoBasicaNode.path("tipo_inmueble").asText(null));
-                infoBasica.setEstrato(infoBasicaNode.path("estrato").asText(null));
-                infoBasica.setArea_usuario_m2(infoBasicaNode.path("area_usuario_m2").asDouble(0.0));
-                dto.setInformacion_basica(infoBasica);
+            JsonNode initialDataNode = rootNode.path("initial_data");
+            AppraisalResultDTO.InformacionBasica infoBasica = new AppraisalResultDTO.InformacionBasica();
+            infoBasica.setRequestId(appraisalResult.getRequestId()); // Obtener requestId directamente de la entidad
+            if (!initialDataNode.isMissingNode()) {
+                infoBasica.setCiudad(initialDataNode.path("ciudad").asText(null));
+                infoBasica.setTipo_inmueble(initialDataNode.path("tipo_inmueble").asText(null));
+                infoBasica.setEstrato(initialDataNode.path("estrato").asText(null));
+                infoBasica.setArea_usuario_m2(initialDataNode.path("area_usuario_m2").asDouble(0.0));
             }
+            dto.setInformacion_basica(infoBasica);
 
             // Populate AnalisisMercado
             JsonNode analisisMercadoNode = rootNode.path("analisis_mercado");
@@ -259,8 +268,8 @@ public class AppraisalResultService {
                     List<PuntoCriticoDTO> puntosCriticos = new ArrayList<>();
                     for (JsonNode puntoNode : puntosCriticosNode) {
                         PuntoCriticoDTO punto = new PuntoCriticoDTO();
-                        punto.setTitulo(puntoNode.path("titulo").asText(null));
-                        punto.setDescripcion(puntoNode.path("descripcion").asText(null));
+                        punto.setTitulo(puntoNode.path("aspecto_legal_relevante").asText(null));
+                        punto.setDescripcion(puntoNode.path("descripcion_implicacion_riesgo").asText(null));
                         puntosCriticos.add(punto);
                     }
                     analisisLegal.setPuntos_criticos_y_riesgos(puntosCriticos);
@@ -271,8 +280,8 @@ public class AppraisalResultService {
                     List<DocumentoClaveDTO> documentosClave = new ArrayList<>();
                     for (JsonNode docNode : documentosClaveNode) {
                         DocumentoClaveDTO documento = new DocumentoClaveDTO();
-                        documento.setNombre(docNode.path("nombre").asText(null));
-                        documento.setEstado(docNode.path("estado").asText(null));
+                        documento.setNombre(docNode.path("documento").asText(null));
+                        documento.setEstado(docNode.path("importancia_para_arrendamiento").asText(null));
                         documentosClave.add(documento);
                     }
                     analisisLegal.setDocumentacion_clave_a_revisar_o_completar(documentosClave);

@@ -56,73 +56,10 @@ public class AppraisalController {
             ObjectNode mutableAppraisalData = (ObjectNode) objectMapper.readTree(appraisalDataNode.toString());
 
             // Ensure 'initial_data' object exists at the root of appraisalData
-            ObjectNode initialDataNode;
-            if (mutableAppraisalData.has("initial_data") && mutableAppraisalData.get("initial_data").isObject()) {
-                initialDataNode = (ObjectNode) mutableAppraisalData.get("initial_data");
-            } else {
-                initialDataNode = objectMapper.createObjectNode();
-                mutableAppraisalData.set("initial_data", initialDataNode);
-            }
-
-            // Consistently map and rename fields to Spanish, ensuring they are under
-            // 'initial_data'
-            // Consistently map and rename fields to Spanish, ensuring they are under
-            // 'initial_data'
-            // 'city' -> 'ciudad'
-            JsonNode cityNode = mutableAppraisalData.has("city") ? mutableAppraisalData.get("city")
-                    : initialDataNode.path("city");
-            if (!cityNode.isMissingNode() && !cityNode.isNull()) {
-                initialDataNode.set("ciudad", cityNode);
-            } else {
-                initialDataNode.put("ciudad", "N/A");
-            }
-            mutableAppraisalData.remove("city"); // Remove from root if it was there
-            initialDataNode.remove("city"); // Remove from initial_data if it was there (English name)
-
-            // 'property_type' -> 'tipo_inmueble'
-            JsonNode propertyTypeNode = mutableAppraisalData.has("property_type")
-                    ? mutableAppraisalData.get("property_type")
-                    : initialDataNode.path("property_type");
-            if (!propertyTypeNode.isMissingNode() && !propertyTypeNode.isNull()) {
-                initialDataNode.set("tipo_inmueble", propertyTypeNode);
-            } else {
-                initialDataNode.put("tipo_inmueble", "N/A");
-            }
-            mutableAppraisalData.remove("property_type"); // Remove from root if it was there
-            initialDataNode.remove("property_type"); // Remove from initial_data if it was there (English name)
-
-            // 'built_area' -> 'area_usuario_m2'
-            JsonNode builtAreaNode = mutableAppraisalData.has("built_area") ? mutableAppraisalData.get("built_area")
-                    : initialDataNode.path("built_area");
-            if (!builtAreaNode.isMissingNode() && !builtAreaNode.isNull()) {
-                initialDataNode.set("area_usuario_m2", builtAreaNode);
-            } else {
-                initialDataNode.put("area_usuario_m2", 0); // Default to 0 if not present
-            }
-            mutableAppraisalData.remove("built_area"); // Remove from root if it was there
-            initialDataNode.remove("built_area"); // Remove from initial_data if it was there (English name)
-
-            // 'address'
-            JsonNode addressNode = mutableAppraisalData.has("address") ? mutableAppraisalData.get("address")
-                    : initialDataNode.path("address");
-            if (!addressNode.isMissingNode() && !addressNode.isNull()) {
-                initialDataNode.set("address", addressNode);
-            } else {
-                initialDataNode.put("address", "N/A");
-            }
-            mutableAppraisalData.remove("address"); // Remove from root if it was there
-
-            // 'estrato'
-            JsonNode estratoNode = mutableAppraisalData.has("estrato") ? mutableAppraisalData.get("estrato")
-                    : initialDataNode.path("estrato");
-            if (!estratoNode.isMissingNode() && !estratoNode.isNull()) {
-                initialDataNode.set("estrato", estratoNode);
-            } else {
-                initialDataNode.put("estrato", "N/A");
-            }
-            mutableAppraisalData.remove("estrato"); // Remove from root if it was there
-
-            // Convert the modified JsonNode back to String
+            // Asumir que el frontend ya envía la estructura correcta con 'initial_data' y
+            // 'informacion_basica' anidada.
+            // No es necesario manipular los campos de informacion_basica aquí si ya vienen
+            // correctamente.
             appraisalResult.setAppraisalData(objectMapper.writeValueAsString(mutableAppraisalData));
             appraisalResult.setUserId(userDetails.getUserId()); // Assign userId from authenticated user
             appraisalResult.setAnonymousSessionId(null); // Always null if it's an authenticated user
@@ -151,11 +88,18 @@ public class AppraisalController {
         return ResponseEntity.ok(results);
     }
 
-    @PostMapping("/download-pdf")
-    public ResponseEntity<byte[]> downloadPdf(@RequestBody AppraisalResultDTO appraisalResultDTO) {
+    @GetMapping("/download-pdf")
+    public ResponseEntity<byte[]> downloadPdf(@RequestParam("appraisalId") String appraisalId) {
         try {
-            logger.info("Received appraisalResultDTO for PDF generation: {}", appraisalResultDTO);
-            // Convert AppraisalResultDTO to a Map for the generic PDF generation service
+            logger.info("Received request for PDF generation for appraisalId: {}", appraisalId);
+            Long id = Long.parseLong(appraisalId); // Convertir el appraisalId a Long
+            AppraisalResult appraisalResult = appraisalResultService.getAppraisalResultByIdAndCurrentUser(id)
+                    .orElse(null); // Usar getAppraisalResultByIdAndCurrentUser
+            if (appraisalResult == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new byte[0]);
+            }
+            // Convert AppraisalResult to a Map for the generic PDF generation service
+            AppraisalResultDTO appraisalResultDTO = appraisalResultService.mapToDTO(appraisalResult);
             @SuppressWarnings("unchecked")
             Map<String, Object> dataModel = objectMapper.convertValue(appraisalResultDTO, Map.class);
 
