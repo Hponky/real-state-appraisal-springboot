@@ -1,7 +1,7 @@
 package peritaje.inmobiliario.integrador.security;
 
 import java.util.Collections;
-import java.util.Map;
+import java.util.UUID;
 
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -27,17 +27,20 @@ public class CustomUserDetailsService implements UserDetailsService {
 
         try {
             // Validar el token y extraer los claims
-            Map<String, Object> claims = jwtService.extractAllClaims(token);
-            String userId = (String) claims.get("sub"); // 'sub' es el subject, que en Supabase es el user ID
-            String email = (String) claims.get("email"); // 'email' es el email del usuario
+            UUID userId = jwtService.extractUserId(token);
+            String email = jwtService.extractUsername(token);
 
-            if (userId == null || userId.trim().isEmpty()) {
+            if (userId == null) {
                 throw new UsernameNotFoundException("User ID not found in token");
             }
 
-            // Asignar un rol por defecto. En un caso real, los roles se obtendrían de la base de datos o del token.
-            return new CustomUserDetails(userId, email, Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER")));
-        } catch (io.jsonwebtoken.security.SignatureException | io.jsonwebtoken.MalformedJwtException | io.jsonwebtoken.ExpiredJwtException | io.jsonwebtoken.UnsupportedJwtException | IllegalArgumentException e) {
+            // Asignar un rol por defecto. En un caso real, los roles se obtendrían de la
+            // base de datos o del token.
+            return new CustomUserDetails(userId, email,
+                    Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER")));
+        } catch (io.jsonwebtoken.security.SignatureException | io.jsonwebtoken.MalformedJwtException
+                | io.jsonwebtoken.ExpiredJwtException | io.jsonwebtoken.UnsupportedJwtException
+                | IllegalArgumentException e) {
             throw new UsernameNotFoundException("Invalid token or user not found: " + e.getMessage(), e);
         }
     }

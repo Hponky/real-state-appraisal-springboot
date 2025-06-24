@@ -9,7 +9,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import peritaje.inmobiliario.integrador.dto.AuthRequest;
 import peritaje.inmobiliario.integrador.dto.AuthResponse;
-import peritaje.inmobiliario.integrador.dto.MigrationRequest;
 import peritaje.inmobiliario.integrador.service.SupabaseAuthService;
 import reactor.core.publisher.Mono;
 
@@ -48,11 +47,5 @@ public class AuthController {
                     }
                     return Mono.error(new RuntimeException("Supabase signin failed", e));
                 });
-    }
-
-    @PostMapping("/migrate-session")
-    public Mono<ResponseEntity<Void>> migrateSession(@Valid @RequestBody MigrationRequest migrationRequest) {
-        return supabaseAuthService.migrateSession(migrationRequest)
-                .thenReturn(ResponseEntity.ok().build());
     }
 }

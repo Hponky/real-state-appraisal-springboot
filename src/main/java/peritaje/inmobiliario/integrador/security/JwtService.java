@@ -2,6 +2,7 @@ package peritaje.inmobiliario.integrador.security;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
+import java.util.UUID;
 import java.util.function.Function;
 
 import javax.crypto.SecretKey;
@@ -37,8 +38,9 @@ public class JwtService {
         return claimsResolver.apply(claims);
     }
 
-    public String extractUserId(String token) {
-        return extractClaim(token, claims -> claims.get("sub", String.class));
+    public UUID extractUserId(String token) {
+        String sub = extractClaim(token, claims -> claims.get("sub", String.class));
+        return UUID.fromString(sub);
     }
 
     public String extractUsername(String token) {

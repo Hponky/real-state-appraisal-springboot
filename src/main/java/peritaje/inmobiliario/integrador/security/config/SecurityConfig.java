@@ -25,14 +25,7 @@ public class SecurityConfig {
         http
                 .csrf(csrf -> csrf.disable()) // Deshabilitar CSRF para APIs REST
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/api/public/**", "/api/appraisal/download-pdf/**").permitAll() // Permitir
-                                                                                                         // acceso
-                                                                                                         // público a
-                                                                                                         // ciertos
-                                                                                                         // endpoints,
-                                                                                                         // incluyendo
-                                                                                                         // la descarga
-                                                                                                         // de PDF
+                        .requestMatchers("/api/public/**", "/api/appraisal/download-pdf/**", "/api/appraisal/save-result", "/api/appraisal/migrate-anonymous-data").permitAll()
                         .anyRequest().authenticated() // Requerir autenticación para cualquier otra solicitud
                 )
                 .sessionManagement(session -> session

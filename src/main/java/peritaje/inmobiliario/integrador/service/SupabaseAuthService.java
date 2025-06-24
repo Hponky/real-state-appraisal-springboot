@@ -7,7 +7,6 @@ import org.springframework.web.reactive.function.client.WebClient;
 import peritaje.inmobiliario.integrador.dto.AuthRequest;
 import peritaje.inmobiliario.integrador.dto.AuthResponse;
 import peritaje.inmobiliario.integrador.dto.ErrorResponse;
-import peritaje.inmobiliario.integrador.dto.MigrationRequest;
 import reactor.core.publisher.Mono;
 
 @Service
@@ -86,11 +85,5 @@ public class SupabaseAuthService {
                                                                 error.getMessage() != null ? error.getMessage()
                                                                                 : error.getError()))))
                                 .bodyToMono(Void.class);
-        }
-
-        public Mono<Void> migrateSession(MigrationRequest migrationRequest) {
-                System.out.println("Migrating session from anonymous ID: " + migrationRequest.getAnonymousSessionId() +
-                                " to user ID: " + migrationRequest.getUserId());
-                return Mono.empty();
         }
 }

@@ -115,11 +115,11 @@
 
     <div class="section">
         <h2>Información Básica</h2>
-        <p><strong>ID Solicitud:</strong> <span th:text="${informacion_basica.requestId}"></span></p>
-        <p><strong>Ciudad:</strong> <span th:text="${informacion_basica.ciudad}"></span></p>
-        <p><strong>Tipo de Inmueble:</strong> <span th:text="${informacion_basica.tipo_inmueble}"></span></p>
-        <p><strong>Estrato:</strong> <span th:text="${informacion_basica.estrato}"></span></p>
-        <p><strong>Área (m²):</strong> <span th:text="${informacion_basica.area_usuario_m2}"></span></p>
+        <p><strong>ID Solicitud:</strong> <span th:text="${analisis_legal_arrendamiento.requestId}"></span></p>
+        <p><strong>Ciudad:</strong> <span th:text="${form_data.ciudad}"></span></p>
+        <p><strong>Tipo de Inmueble:</strong> <span th:text="${form_data.tipo_inmueble}"></span></p>
+        <p><strong>Estrato:</strong> <span th:text="${form_data.estrato}"></span></p>
+        <p><strong>Área (m²):</strong> <span th:text="${form_data.area_usuario_m2}"></span></p>
     </div>
 
     <div class="section" th:if="${analisis_mercado != null}">
@@ -194,14 +194,14 @@
             <table>
                 <thead>
                     <tr>
-                        <th>Título</th>
-                        <th>Descripción</th>
+                        <th>Aspecto Legal Relevante</th>
+                        <th>Implicación y Riesgo</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr th:each="punto : ${analisis_legal_arrendamiento.puntos_criticos_y_riesgos}">
-                        <td th:text="${punto.titulo}"></td>
-                        <td th:text="${punto.descripcion}"></td>
+                        <td th:text="${punto.aspecto_legal_relevante}"></td>
+                        <td th:text="${punto.descripcion_implicacion_riesgo}"></td>
                     </tr>
                 </tbody>
             </table>
@@ -212,14 +212,14 @@
             <table>
                 <thead>
                     <tr>
-                        <th>Nombre</th>
-                        <th>Estado</th>
+                        <th>Documento</th>
+                        <th>Importancia para Arrendamiento</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <tr th:each="documento : ${analisis_legal_arrendamiento.documentacion_clave_a_revisar_o_completar}">
-                        <td th:text="${documento.nombre}"></td>
-                        <td th:text="${documento.estado}"></td>
+                    <tr th:each="doc : ${analisis_legal_arrendamiento.documentacion_clave_a_revisar_o_completar}">
+                        <td th:text="${doc.documento}"></td>
+                        <td th:text="${doc.importancia_para_arrendamiento}"></td>
                     </tr>
                 </tbody>
             </table>
