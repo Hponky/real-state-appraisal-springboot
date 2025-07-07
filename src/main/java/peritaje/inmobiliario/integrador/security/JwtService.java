@@ -60,7 +60,17 @@ public class JwtService {
     }
 
     private Boolean isTokenExpired(String token) {
-        return extractExpiration(token).before(new Date());
+        try {
+            return extractExpiration(token).before(new Date());
+        } catch (io.jsonwebtoken.ExpiredJwtException e) {
+            // Si el token está expirado, se considera expirado.
+            return true;
+        } catch (Exception e) {
+            // Para cualquier otra excepción durante la extracción de la expiración,
+            // se considera que el token no es válido o está malformado.
+            System.err.println("JWT Expiration Check Error: " + e.getMessage());
+            return true; // O false, dependiendo de la política de seguridad. True para ser más restrictivo.
+        }
     }
 
     public Boolean validateToken(String token) {

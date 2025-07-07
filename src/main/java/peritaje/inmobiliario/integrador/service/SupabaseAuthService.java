@@ -4,86 +4,86 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import org.springframework.web.reactive.function.client.WebClientResponseException;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import peritaje.inmobiliario.integrador.dto.AuthRequest;
 import peritaje.inmobiliario.integrador.dto.AuthResponse;
 import peritaje.inmobiliario.integrador.dto.ErrorResponse;
+import peritaje.inmobiliario.integrador.exception.InvalidCredentialsException;
+import peritaje.inmobiliario.integrador.exception.SupabaseIntegrationException;
+import peritaje.inmobiliario.integrador.exception.UserAlreadyExistsException;
 import reactor.core.publisher.Mono;
 
 @Service
-public class SupabaseAuthService {
+public class SupabaseAuthService implements ISupabaseAuthService {
 
-        private final WebClient webClient;
+    private final WebClient webClient;
+    private final ObjectMapper objectMapper;
 
-        public SupabaseAuthService(@Value("${supabase.url}") String supabaseUrl,
-                        @Value("${supabase.service-key}") String supabaseServiceKey,
-                        WebClient.Builder webClientBuilder) {
-                this.webClient = webClientBuilder.baseUrl(supabaseUrl)
-                                .defaultHeader("apikey", supabaseServiceKey)
-                                .defaultHeader("Authorization", "Bearer " + supabaseServiceKey)
-                                .build();
+    public SupabaseAuthService(@Value("${supabase.url}") String supabaseUrl,
+            @Value("${supabase.service-key}") String supabaseServiceKey) {
+        this.objectMapper = new ObjectMapper();
+        this.webClient = WebClient.builder().baseUrl(supabaseUrl)
+                .defaultHeader("apikey", supabaseServiceKey)
+                .defaultHeader("Authorization", "Bearer " + supabaseServiceKey)
+                .defaultHeader("Content-Type", "application/json")
+                .build();
+    }
+
+    @Override
+    public Mono<AuthResponse> signUp(AuthRequest authRequest) {
+        return webClient.post()
+                .uri("/auth/v1/signup")
+                .bodyValue(authRequest)
+                .retrieve()
+                .bodyToMono(AuthResponse.class)
+                .onErrorMap(this::handleSupabaseError);
+    }
+
+    @Override
+    public Mono<AuthResponse> signIn(AuthRequest authRequest) {
+        return webClient.post()
+                .uri("/auth/v1/token?grant_type=password")
+                .bodyValue(authRequest)
+                .retrieve()
+                .bodyToMono(AuthResponse.class)
+                .onErrorMap(this::handleSupabaseError);
+    }
+
+    @Override
+    public Mono<Void> signOut(String accessToken) {
+        return webClient.post()
+                .uri("/auth/v1/logout")
+                .header("Authorization", "Bearer " + accessToken)
+                .retrieve()
+                .bodyToMono(Void.class)
+                .onErrorMap(this::handleSupabaseError);
+    }
+
+    private Throwable handleSupabaseError(Throwable error) {
+        if (!(error instanceof WebClientResponseException)) {
+            return new SupabaseIntegrationException("An unexpected error occurred", error);
         }
 
-        public Mono<AuthResponse> signUp(AuthRequest authRequest) {
-                return webClient.post()
-                                .uri("/auth/v1/signup")
-                                .bodyValue(authRequest)
-                                .retrieve()
-                                .onStatus(status -> status.is4xxClientError(), response -> response
-                                                .bodyToMono(ErrorResponse.class)
-                                                .flatMap(error -> Mono.error(new RuntimeException(
-                                                                error.getMessage() != null ? error.getMessage()
-                                                                                : error.getError()))))
-                                .bodyToMono(AuthResponse.class);
-        }
+        WebClientResponseException ex = (WebClientResponseException) error;
+        String errorBody = ex.getResponseBodyAsString();
 
-        public Mono<AuthResponse> signIn(AuthRequest authRequest) {
-                return webClient.post()
-                                .uri("/auth/v1/token?grant_type=password")
-                                .bodyValue(authRequest)
-                                .retrieve()
-                                .onStatus(status -> status.is4xxClientError() || status.is5xxServerError(),
-                                                response -> response
-                                                                .bodyToMono(String.class) // Cambiado a String para
-                                                                                          // capturar el cuerpo completo
-                                                                .flatMap(errorBody -> {
-                                                                        System.err.println(
-                                                                                        "Supabase signIn error response: "
-                                                                                                        + errorBody); // Log
-                                                                                                                      // del
-                                                                                                                      // cuerpo
-                                                                                                                      // del
-                                                                                                                      // error
-                                                                        try {
-                                                                                ErrorResponse error = new com.fasterxml.jackson.databind.ObjectMapper()
-                                                                                                .readValue(errorBody,
-                                                                                                                ErrorResponse.class);
-                                                                                return Mono.error(new RuntimeException(
-                                                                                                error.getMessage() != null
-                                                                                                                ? error.getMessage()
-                                                                                                                : error.getError()));
-                                                                        } catch (Exception e) {
-                                                                                String errorMessage = "Supabase signin failed. Error body: "
-                                                                                                + (errorBody != null
-                                                                                                                && !errorBody.isEmpty()
-                                                                                                                                ? errorBody
-                                                                                                                                : "[Empty or null error body]");
-                                                                                return Mono.error(new RuntimeException(
-                                                                                                errorMessage, e));
-                                                                        }
-                                                                }))
-                                .bodyToMono(AuthResponse.class);
-        }
+        try {
+            ErrorResponse errorResponse = objectMapper.readValue(errorBody, ErrorResponse.class);
+            
+            if (errorResponse.getMessage() != null && errorResponse.getMessage().contains("User already registered")) {
+                return new UserAlreadyExistsException("User already registered", ex);
+            }
+            
+            if (errorResponse.getError() != null && errorResponse.getError().contains("invalid_grant")) {
+                return new InvalidCredentialsException("Invalid login credentials", ex);
+            }
 
-        public Mono<Void> signOut(String accessToken) {
-                return webClient.post()
-                                .uri("/auth/v1/logout")
-                                .header("Authorization", "Bearer " + accessToken)
-                                .retrieve()
-                                .onStatus(status -> status.is4xxClientError(), response -> response
-                                                .bodyToMono(ErrorResponse.class)
-                                                .flatMap(error -> Mono.error(new RuntimeException(
-                                                                error.getMessage() != null ? error.getMessage()
-                                                                                : error.getError()))))
-                                .bodyToMono(Void.class);
+            return new SupabaseIntegrationException("Supabase operation failed: " + errorBody, ex);
+        } catch (Exception parseException) {
+            return new SupabaseIntegrationException("Supabase operation failed and response could not be parsed: " + errorBody, ex);
         }
+    }
 }

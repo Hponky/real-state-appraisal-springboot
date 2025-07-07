@@ -1,4 +1,5 @@
 package peritaje.inmobiliario.integrador.service;
+import peritaje.inmobiliario.integrador.exception.PdfGenerationException;
 
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -9,7 +10,7 @@ import java.io.IOException;
 import java.util.Map;
 
 @Service
-public class PdfGenerationService {
+public class PdfGenerationService implements IPdfGenerationService {
 
         private final HtmlGenerationService htmlGenerationService;
 
@@ -18,7 +19,8 @@ public class PdfGenerationService {
                 this.htmlGenerationService = htmlGenerationService;
         }
 
-        public byte[] generatePdf(String templateName, Map<String, Object> dataModel) throws IOException {
+        @Override
+        public byte[] generatePdf(String templateName, Map<String, Object> dataModel) throws PdfGenerationException {
                 String htmlContent = htmlGenerationService.generateHtmlContent(templateName, dataModel);
 
                 ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -28,7 +30,7 @@ public class PdfGenerationService {
                 try {
                         renderer.createPDF(baos);
                 } catch (com.lowagie.text.DocumentException e) {
-                        throw new IOException("Error generating PDF: " + e.getMessage(), e);
+                        throw new PdfGenerationException("Error generating PDF: " + e.getMessage(), e);
                 }
 
                 return baos.toByteArray();

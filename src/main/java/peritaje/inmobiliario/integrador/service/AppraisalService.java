@@ -5,60 +5,65 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import peritaje.inmobiliario.integrador.dto.AppraisalDetailsDTO;
+import peritaje.inmobiliario.integrador.exception.ResourceNotFoundException;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import peritaje.inmobiliario.integrador.domain.Appraisal;
 import peritaje.inmobiliario.integrador.repository.AppraisalRepository;
-import peritaje.inmobiliario.integrador.security.CustomUserDetails;
 
 @Service
 public class AppraisalService {
 
     private final AppraisalRepository appraisalRepository;
+    private final ObjectMapper objectMapper;
+    private final IUserContextService userContextService;
 
-    public AppraisalService(AppraisalRepository appraisalRepository) {
+    public AppraisalService(AppraisalRepository appraisalRepository, ObjectMapper objectMapper,
+            IUserContextService userContextService) {
         this.appraisalRepository = appraisalRepository;
+        this.objectMapper = objectMapper;
+        this.userContextService = userContextService;
     }
 
     public List<Appraisal> getAppraisalsForCurrentUser() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication != null && authentication.getPrincipal() instanceof CustomUserDetails) {
-            CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
-            return appraisalRepository.findByUserId(userDetails.getUserId());
-        }
-        return List.of();
+        UUID userId = userContextService.getCurrentUserId();
+        return appraisalRepository.findByUserId(userId);
     }
 
-    public Optional<Appraisal> getAppraisalByIdAndCurrentUser(String id) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication != null && authentication.getPrincipal() instanceof CustomUserDetails) {
-            CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
-            return appraisalRepository.findByIdAndUserId(UUID.fromString(id), userDetails.getUserId());
-        }
-        return Optional.empty();
+    public Appraisal getAppraisalById(String id) {
+        return appraisalRepository.findById(UUID.fromString(id))
+                .orElseThrow(() -> new ResourceNotFoundException("Appraisal not found with ID: " + id));
+    }
+
+    public Appraisal getAppraisalByIdAndCurrentUser(String id) {
+        UUID userId = userContextService.getCurrentUserIdOptional()
+                .orElseThrow(() -> new ResourceNotFoundException("User not authenticated or user ID not found."));
+        return appraisalRepository.findByIdAndUserId(UUID.fromString(id), userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Appraisal not found with ID: " + id + " for current user."));
     }
 
     @Transactional
-    public Appraisal saveAppraisal(Appraisal appraisal) {
+    public Appraisal updateAppraisalStatus(UUID id, String status) {
+        Appraisal appraisal = appraisalRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Appraisal not found with ID: " + id));
+        appraisal.setStatus(status);
         return appraisalRepository.save(appraisal);
     }
 
     @Transactional
-    public Optional<Appraisal> updateAppraisalStatus(UUID id, String status) {
-        return appraisalRepository.findById(id).map(appraisal -> {
-            appraisal.setStatus(status);
-            return appraisalRepository.save(appraisal);
-        });
-    }
-
-    @Transactional
-    public Optional<Appraisal> updateAppraisalResultData(UUID id, Map<String, Object> resultData) {
-        return appraisalRepository.findById(id).map(appraisal -> {
-            appraisal.setResultData(resultData);
-            return appraisalRepository.save(appraisal);
-        });
+    public Appraisal updateAppraisalResultData(UUID id, AppraisalDetailsDTO appraisalDetailsDTO) {
+        Appraisal appraisal = appraisalRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Appraisal not found with ID: " + id));
+        Map<String, Object> resultData = objectMapper.convertValue(appraisalDetailsDTO,
+                new TypeReference<Map<String, Object>>() {
+                });
+        appraisal.setResultData(resultData);
+        return appraisalRepository.save(appraisal);
     }
 }

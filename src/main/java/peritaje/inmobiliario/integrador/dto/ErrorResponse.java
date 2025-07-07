@@ -56,4 +56,29 @@ public class ErrorResponse {
     public void setStatusCode(Integer statusCode) {
         this.statusCode = statusCode;
     }
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        ErrorResponse that = (ErrorResponse) o;
+        return java.util.Objects.equals(message, that.message) &&
+                java.util.Objects.equals(msg, that.msg) &&
+                java.util.Objects.equals(error, that.error) &&
+                java.util.Objects.equals(statusCode, that.statusCode);
+    }
+
+    @Override
+    public int hashCode() {
+        return java.util.Objects.hash(message, msg, error, statusCode);
+    }
+
+    @Override
+    public String toString() {
+        return "ErrorResponse{" +
+                "message='" + message + '\'' +
+                ", msg='" + msg + '\'' +
+                ", error='" + error + '\'' +
+                ", statusCode=" + statusCode +
+                '}';
+    }
 }
