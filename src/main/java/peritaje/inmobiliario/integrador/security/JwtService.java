@@ -7,15 +7,23 @@ import java.util.function.Function;
 
 import javax.crypto.SecretKey;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.MalformedJwtException;
+import io.jsonwebtoken.UnsupportedJwtException;
 import io.jsonwebtoken.security.Keys;
+import io.jsonwebtoken.security.SignatureException;
 
 @Service
 public class JwtService {
+
+    private static final Logger logger = LoggerFactory.getLogger(JwtService.class);
 
     @Value("${supabase.jwt.secret}")
     private String jwtSecret;
@@ -44,43 +52,33 @@ public class JwtService {
     }
 
     public String extractUsername(String token) {
-        // Supabase JWTs often use 'email' as the username, or 'sub' (subject) as the
-        // user ID.
-        // Prioritize 'email' if available, otherwise fall back to 'sub'.
         Claims claims = extractAllClaims(token);
         String email = claims.get("email", String.class);
         if (email != null && !email.isEmpty()) {
             return email;
         }
-        return claims.get("sub", String.class); // Fallback to user ID if email is not present
+        return claims.get("sub", String.class);
     }
 
     public Date extractExpiration(String token) {
         return extractClaim(token, Claims::getExpiration);
     }
 
-    private Boolean isTokenExpired(String token) {
+    public boolean validateToken(String token) {
         try {
-            return extractExpiration(token).before(new Date());
-        } catch (io.jsonwebtoken.ExpiredJwtException e) {
-            // Si el token está expirado, se considera expirado.
+            extractAllClaims(token);
             return true;
-        } catch (Exception e) {
-            // Para cualquier otra excepción durante la extracción de la expiración,
-            // se considera que el token no es válido o está malformado.
-            System.err.println("JWT Expiration Check Error: " + e.getMessage());
-            return true; // O false, dependiendo de la política de seguridad. True para ser más restrictivo.
+        } catch (SignatureException e) {
+            logger.error("JWT Validation Error: Invalid signature - {}", e.getMessage());
+        } catch (MalformedJwtException e) {
+            logger.error("JWT Validation Error: Malformed token - {}", e.getMessage());
+        } catch (ExpiredJwtException e) {
+            logger.error("JWT Validation Error: Expired token - {}", e.getMessage());
+        } catch (UnsupportedJwtException e) {
+            logger.error("JWT Validation Error: Unsupported token - {}", e.getMessage());
+        } catch (IllegalArgumentException e) {
+            logger.error("JWT Validation Error: Illegal argument or empty token - {}", e.getMessage());
         }
-    }
-
-    public Boolean validateToken(String token) {
-        try {
-            return !isTokenExpired(token);
-        } catch (Exception e) {
-            // Log the exception (e.g., SignatureException, MalformedJwtException,
-            // ExpiredJwtException)
-            System.err.println("JWT Validation Error: " + e.getMessage());
-            return false;
-        }
+        return false;
     }
 }

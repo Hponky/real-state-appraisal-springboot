@@ -12,4 +12,9 @@ class IntegradorApplicationTests {
 	void contextLoads() {
 	}
 
+	@Test
+	void main() {
+		IntegradorApplication.main(new String[] {});
+	}
+
 }

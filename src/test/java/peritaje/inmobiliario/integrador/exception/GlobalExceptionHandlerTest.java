@@ -1,24 +1,23 @@
 package peritaje.inmobiliario.integrador.exception;
 
+import java.util.Collections;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.validation.BindingResult;
-import org.springframework.validation.FieldError;
-import org.springframework.web.bind.MethodArgumentNotValidException;
+ import org.springframework.validation.FieldError;
+ import org.springframework.web.bind.MethodArgumentNotValidException;
 
-import peritaje.inmobiliario.integrador.dto.ErrorResponse;
-import reactor.core.publisher.Mono;
-import reactor.test.StepVerifier;
- 
- import java.util.Collections;
- 
- import static org.junit.jupiter.api.Assertions.assertEquals;
- import static org.junit.jupiter.api.Assertions.assertNotNull;
- import static org.mockito.Mockito.mock;
- import static org.mockito.Mockito.when;
+ import peritaje.inmobiliario.integrador.dto.ErrorResponse;
+ import reactor.core.publisher.Mono;
+ import reactor.test.StepVerifier;
  
  public class GlobalExceptionHandlerTest {
  
@@ -76,7 +75,7 @@ import reactor.test.StepVerifier;
                      assertNotNull(response);
                      assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
                      assertNotNull(response.getBody());
-                     assertEquals("Resource Not Found", response.getBody().getMessage());
+                     assertEquals("Recurso no encontrado", response.getBody().getMessage());
                      assertEquals("Resource not found", response.getBody().getMsg());
                  })
                  .verifyComplete();
@@ -92,7 +91,7 @@ import reactor.test.StepVerifier;
                      assertNotNull(response);
                      assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
                      assertNotNull(response.getBody());
-                     assertEquals("User Already Exists", response.getBody().getMessage());
+                     assertEquals("El usuario ya existe.", response.getBody().getMessage());
                      assertEquals("El usuario ya existe.", response.getBody().getError());
                  })
                  .verifyComplete();
@@ -108,8 +107,8 @@ import reactor.test.StepVerifier;
                      assertNotNull(response);
                      assertEquals(HttpStatus.SERVICE_UNAVAILABLE, response.getStatusCode());
                      assertNotNull(response.getBody());
-                     assertEquals("Service Unavailable", response.getBody().getMessage());
-                     assertEquals("Error de integraci\u00f3n con el servicio externo. Intente de nuevo m\u00e1s tarde.",
+                     assertEquals("Error de integración con el servicio externo. Intente de nuevo más tarde.", response.getBody().getMessage());
+                     assertEquals("Error de integración con el servicio externo. Intente de nuevo más tarde.",
                              response.getBody().getError());
                  })
                  .verifyComplete();
@@ -125,8 +124,8 @@ import reactor.test.StepVerifier;
                      assertNotNull(response);
                      assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
                      assertNotNull(response.getBody());
-                     assertEquals("PDF Generation Failed", response.getBody().getMessage());
-                     assertEquals("Error al generar el documento PDF. Intente de nuevo mas tarde.", response.getBody().getError());
+                     assertEquals("Error interno del servidor", response.getBody().getMessage());
+                     assertEquals("Fallo en la generacion del PDF", response.getBody().getError());
                  })
                  .verifyComplete();
      }
@@ -141,7 +140,7 @@ import reactor.test.StepVerifier;
                      assertNotNull(response);
                      assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
                      assertNotNull(response.getBody());
-                     assertEquals("Invalid Credentials", response.getBody().getMessage());
+                     assertEquals("Credenciales de autenticacion invalidas.", response.getBody().getMessage());
                      assertEquals("Credenciales de autenticacion invalidas.", response.getBody().getError());
                  })
                  .verifyComplete();
@@ -158,7 +157,7 @@ import reactor.test.StepVerifier;
                      assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
                      assertNotNull(response.getBody());
                      assertEquals("Internal Server Error", response.getBody().getMessage());
-                     assertEquals("Ha ocurrido un error inesperado. Por favor, intente de nuevo m\u00e1s tarde.",
+                     assertEquals("Ha ocurrido un error inesperado. Por favor, intente de nuevo más tarde.",
                              response.getBody().getError());
                  })
                  .verifyComplete();

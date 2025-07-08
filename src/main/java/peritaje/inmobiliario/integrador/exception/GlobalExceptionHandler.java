@@ -46,21 +46,21 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ResourceNotFoundException.class)
     public Mono<ResponseEntity<ErrorResponse>> handleResourceNotFoundException(ResourceNotFoundException ex) {
         logger.warn("Resource not found: {}", ex.getMessage());
-        ErrorResponse errorResponse = new ErrorResponse("Resource Not Found", ex.getMessage(), "Resource Not Found", HttpStatus.NOT_FOUND.value());
+        ErrorResponse errorResponse = new ErrorResponse("Recurso no encontrado", ex.getMessage(), "Resource Not Found", HttpStatus.NOT_FOUND.value());
         return Mono.just(new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND));
     }
 
     @ExceptionHandler(UserAlreadyExistsException.class)
     public Mono<ResponseEntity<ErrorResponse>> handleUserAlreadyExistsException(UserAlreadyExistsException ex) {
         logger.warn("User already exists: {}", ex.getMessage());
-        ErrorResponse errorResponse = new ErrorResponse("User Already Exists", "El usuario ya existe.");
+        ErrorResponse errorResponse = new ErrorResponse("El usuario ya existe.", "El usuario ya existe.");
         return Mono.just(new ResponseEntity<>(errorResponse, HttpStatus.CONFLICT));
     }
 
     @ExceptionHandler(SupabaseIntegrationException.class)
     public Mono<ResponseEntity<ErrorResponse>> handleSupabaseIntegrationException(SupabaseIntegrationException ex) {
         logger.error("Supabase integration error: {}", ex.getMessage(), ex);
-        ErrorResponse errorResponse = new ErrorResponse("Service Unavailable",
+        ErrorResponse errorResponse = new ErrorResponse("Error de integración con el servicio externo. Intente de nuevo más tarde.",
                 "Error de integración con el servicio externo. Intente de nuevo más tarde.");
         return Mono.just(new ResponseEntity<>(errorResponse, HttpStatus.SERVICE_UNAVAILABLE));
     }
@@ -68,8 +68,8 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(PdfGenerationException.class)
     public Mono<ResponseEntity<ErrorResponse>> handlePdfGenerationException(PdfGenerationException ex) {
         logger.error("PDF generation error: {}", ex.getMessage(), ex);
-        ErrorResponse errorResponse = new ErrorResponse("PDF Generation Failed",
-                "Error al generar el documento PDF. Intente de nuevo mas tarde.");
+        ErrorResponse errorResponse = new ErrorResponse("Error interno del servidor",
+                "Fallo en la generacion del PDF");
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         return Mono.just(new ResponseEntity<>(errorResponse, headers, HttpStatus.INTERNAL_SERVER_ERROR));
@@ -78,7 +78,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(InvalidCredentialsException.class)
     public Mono<ResponseEntity<ErrorResponse>> handleInvalidCredentialsException(InvalidCredentialsException ex) {
         logger.warn("Invalid credentials: {}", ex.getMessage());
-        ErrorResponse errorResponse = new ErrorResponse("Invalid Credentials",
+        ErrorResponse errorResponse = new ErrorResponse("Credenciales de autenticacion invalidas.",
                 "Credenciales de autenticacion invalidas.");
         return Mono.just(new ResponseEntity<>(errorResponse, HttpStatus.UNAUTHORIZED));
     }

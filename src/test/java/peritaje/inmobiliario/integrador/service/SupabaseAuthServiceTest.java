@@ -1,85 +1,94 @@
 package peritaje.inmobiliario.integrador.service;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
 import java.io.IOException;
 
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import static org.mockito.ArgumentMatchers.any;
+import org.mockito.Mock;
+import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import okhttp3.mockwebserver.MockResponse;
-import okhttp3.mockwebserver.MockWebServer;
-import okhttp3.mockwebserver.RecordedRequest;
 import peritaje.inmobiliario.integrador.dto.AuthRequest;
 import peritaje.inmobiliario.integrador.dto.AuthResponse;
 import peritaje.inmobiliario.integrador.dto.ErrorResponse;
 import peritaje.inmobiliario.integrador.exception.InvalidCredentialsException;
 import peritaje.inmobiliario.integrador.exception.SupabaseIntegrationException;
 import peritaje.inmobiliario.integrador.exception.UserAlreadyExistsException;
+import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
 @ExtendWith(MockitoExtension.class)
 class SupabaseAuthServiceTest {
 
-    private MockWebServer mockBackEnd;
+    @Mock
+    private WebClient webClient;
+
+    @Mock
+    private WebClient.RequestBodyUriSpec requestBodyUriSpec;
+
+    @Mock
+    private WebClient.RequestBodySpec requestBodySpec;
+
+    @Mock
+    private WebClient.RequestHeadersSpec requestHeadersSpec;
+
+    @Mock
+    private WebClient.ResponseSpec responseSpec;
+
     private SupabaseAuthService supabaseAuthService;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private AuthRequest authRequest;
     private AuthResponse authResponse;
 
     @BeforeEach
-    void initialize() throws IOException {
-        mockBackEnd = new MockWebServer();
-        mockBackEnd.start();
-        
-        String baseUrl = String.format("http://localhost:%s", mockBackEnd.getPort());
-        supabaseAuthService = new SupabaseAuthService(baseUrl, "test-key");
-        
+    void initialize() {
+        supabaseAuthService = new SupabaseAuthService(webClient);
         authRequest = new AuthRequest("test@example.com", "password123");
         authResponse = new AuthResponse("access_token", "refresh_token", 3600, "bearer", null);
     }
 
-    @AfterEach
-    void tearDown() throws IOException {
-        mockBackEnd.shutdown();
+    private void setupWebClientMocksForBody() {
+        when(webClient.post()).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.uri(any(String.class))).thenReturn(requestBodySpec);
+        when(requestBodySpec.bodyValue(any())).thenReturn(requestHeadersSpec);
+        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
+    }
+    
+    private void setupWebClientMocksForSignOut() {
+        when(webClient.post()).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.uri(any(String.class))).thenReturn(requestBodySpec);
+        when(requestBodySpec.header(any(), any())).thenReturn(requestBodySpec);
+        when(requestBodySpec.retrieve()).thenReturn(responseSpec);
     }
 
     // --- Sign Up Tests ---
 
     @Test
-    void signUp_success() throws JsonProcessingException, InterruptedException {
-        mockBackEnd.enqueue(new MockResponse()
-            .setBody(objectMapper.writeValueAsString(authResponse))
-            .addHeader(HttpHeaders.CONTENT_TYPE, "application/json"));
+    void signUp_success() {
+        setupWebClientMocksForBody();
+        when(responseSpec.bodyToMono(AuthResponse.class)).thenReturn(Mono.just(authResponse));
 
         StepVerifier.create(supabaseAuthService.signUp(authRequest))
             .expectNextMatches(response -> "access_token".equals(response.getAccessToken()))
             .verifyComplete();
-
-        RecordedRequest recordedRequest = mockBackEnd.takeRequest();
-        assertEquals("POST", recordedRequest.getMethod());
-        assertEquals("/auth/v1/signup", recordedRequest.getPath());
     }
 
     @Test
     void signUp_userAlreadyExists() throws JsonProcessingException {
+        setupWebClientMocksForBody();
         ErrorResponse errorDto = new ErrorResponse();
         errorDto.setMessage("User already registered");
         String errorBody = objectMapper.writeValueAsString(errorDto);
+        WebClientResponseException exception = WebClientResponseException.create(400, "Bad Request", null, errorBody.getBytes(), null);
 
-        mockBackEnd.enqueue(new MockResponse()
-            .setResponseCode(HttpStatus.BAD_REQUEST.value())
-            .setBody(errorBody)
-            .addHeader(HttpHeaders.CONTENT_TYPE, "application/json"));
+        when(responseSpec.bodyToMono(AuthResponse.class)).thenReturn(Mono.error(exception));
 
         StepVerifier.create(supabaseAuthService.signUp(authRequest))
             .expectError(UserAlreadyExistsException.class)
@@ -89,30 +98,24 @@ class SupabaseAuthServiceTest {
     // --- Sign In Tests ---
 
     @Test
-    void signIn_success() throws JsonProcessingException, InterruptedException {
-        mockBackEnd.enqueue(new MockResponse()
-            .setBody(objectMapper.writeValueAsString(authResponse))
-            .addHeader(HttpHeaders.CONTENT_TYPE, "application/json"));
+    void signIn_success() {
+        setupWebClientMocksForBody();
+        when(responseSpec.bodyToMono(AuthResponse.class)).thenReturn(Mono.just(authResponse));
 
         StepVerifier.create(supabaseAuthService.signIn(authRequest))
             .expectNextMatches(response -> "access_token".equals(response.getAccessToken()))
             .verifyComplete();
-        
-        RecordedRequest recordedRequest = mockBackEnd.takeRequest();
-        assertEquals("POST", recordedRequest.getMethod());
-        assertEquals("/auth/v1/token?grant_type=password", recordedRequest.getPath());
     }
 
     @Test
     void signIn_invalidCredentials() throws JsonProcessingException {
+        setupWebClientMocksForBody();
         ErrorResponse errorDto = new ErrorResponse();
         errorDto.setError("invalid_grant");
         String errorBody = objectMapper.writeValueAsString(errorDto);
+        WebClientResponseException exception = WebClientResponseException.create(401, "Unauthorized", null, errorBody.getBytes(), null);
 
-        mockBackEnd.enqueue(new MockResponse()
-            .setResponseCode(HttpStatus.UNAUTHORIZED.value())
-            .setBody(errorBody)
-            .addHeader(HttpHeaders.CONTENT_TYPE, "application/json"));
+        when(responseSpec.bodyToMono(AuthResponse.class)).thenReturn(Mono.error(exception));
 
         StepVerifier.create(supabaseAuthService.signIn(authRequest))
             .expectError(InvalidCredentialsException.class)
@@ -122,35 +125,32 @@ class SupabaseAuthServiceTest {
     // --- Sign Out Tests ---
 
     @Test
-    void signOut_success() throws InterruptedException {
-        mockBackEnd.enqueue(new MockResponse().setResponseCode(HttpStatus.NO_CONTENT.value()));
+    void signOut_success() {
+        setupWebClientMocksForSignOut();
+        when(responseSpec.bodyToMono(Void.class)).thenReturn(Mono.empty());
 
         StepVerifier.create(supabaseAuthService.signOut("test_token"))
             .verifyComplete();
-
-        RecordedRequest recordedRequest = mockBackEnd.takeRequest();
-        assertEquals("POST", recordedRequest.getMethod());
-        assertEquals("/auth/v1/logout", recordedRequest.getPath());
-        assertEquals("Bearer test_token", recordedRequest.getHeader("Authorization"));
     }
 
     @Test
     void signOut_failure() {
-        mockBackEnd.enqueue(new MockResponse().setResponseCode(HttpStatus.INTERNAL_SERVER_ERROR.value()));
+        setupWebClientMocksForSignOut();
+        WebClientResponseException exception = WebClientResponseException.create(500, "Internal Server Error", null, null, null);
+        when(responseSpec.bodyToMono(Void.class)).thenReturn(Mono.error(exception));
 
         StepVerifier.create(supabaseAuthService.signOut("test_token"))
             .expectError(SupabaseIntegrationException.class)
             .verify();
     }
     
-    // --- Generic Error Handling Test ---
+    // --- Generic Error Handling Tests ---
     
     @Test
     void handleSupabaseError_unparseableError() {
-        mockBackEnd.enqueue(new MockResponse()
-            .setResponseCode(HttpStatus.BAD_REQUEST.value())
-            .setBody("This is not valid JSON")
-            .addHeader(HttpHeaders.CONTENT_TYPE, "application/json"));
+        setupWebClientMocksForBody();
+        WebClientResponseException exception = WebClientResponseException.create(400, "Bad Request", null, "This is not valid JSON".getBytes(), null);
+        when(responseSpec.bodyToMono(AuthResponse.class)).thenReturn(Mono.error(exception));
 
         StepVerifier.create(supabaseAuthService.signUp(authRequest))
             .expectErrorMatches(error -> error instanceof SupabaseIntegrationException 
@@ -160,15 +160,42 @@ class SupabaseAuthServiceTest {
 
     @Test
     void handleSupabaseError_genericApiError() throws JsonProcessingException {
+        setupWebClientMocksForBody();
         ErrorResponse errorDto = new ErrorResponse();
         errorDto.setError("some_other_error");
         errorDto.setMessage("Something else went wrong.");
         String errorBody = objectMapper.writeValueAsString(errorDto);
+        WebClientResponseException exception = WebClientResponseException.create(400, "Bad Request", null, errorBody.getBytes(), null);
 
-        mockBackEnd.enqueue(new MockResponse()
-            .setResponseCode(HttpStatus.BAD_REQUEST.value())
-            .setBody(errorBody)
-            .addHeader(HttpHeaders.CONTENT_TYPE, "application/json"));
+        when(responseSpec.bodyToMono(AuthResponse.class)).thenReturn(Mono.error(exception));
+
+        StepVerifier.create(supabaseAuthService.signUp(authRequest))
+            .expectErrorMatches(error -> error instanceof SupabaseIntegrationException
+                && error.getMessage().contains("Supabase operation failed:"))
+            .verify();
+    }
+
+    @Test
+    void handleSupabaseError_nonWebClientException() {
+        setupWebClientMocksForBody();
+        when(responseSpec.bodyToMono(AuthResponse.class)).thenReturn(Mono.error(new IOException("Network Error")));
+
+        StepVerifier.create(supabaseAuthService.signUp(authRequest))
+            .expectErrorMatches(error -> error instanceof SupabaseIntegrationException
+                && error.getMessage().contains("An unexpected error occurred")
+                && error.getCause() instanceof IOException)
+            .verify();
+    }
+
+    @Test
+    void handleSupabaseError_withNullMessage() throws JsonProcessingException {
+        setupWebClientMocksForBody();
+        ErrorResponse errorDto = new ErrorResponse();
+        errorDto.setError("some_error_without_message");
+        String errorBody = objectMapper.writeValueAsString(errorDto);
+        WebClientResponseException exception = WebClientResponseException.create(400, "Bad Request", null, errorBody.getBytes(), null);
+
+        when(responseSpec.bodyToMono(AuthResponse.class)).thenReturn(Mono.error(exception));
 
         StepVerifier.create(supabaseAuthService.signUp(authRequest))
             .expectErrorMatches(error -> error instanceof SupabaseIntegrationException

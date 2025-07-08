@@ -6,9 +6,11 @@ import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -35,12 +37,14 @@ public class AppraisalController {
     }
 
     @GetMapping("/history")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<Appraisal>> getAppraisalsForCurrentUser() {
         List<Appraisal> results = appraisalService.getAppraisalsForCurrentUser();
         return ResponseEntity.ok(results);
     }
 
     @GetMapping("/download-pdf")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<byte[]> downloadPdf(@RequestParam("appraisalId") String appraisalId) throws IOException {
         logger.info("Received request for PDF generation for appraisalId: {}", appraisalId);
         Appraisal appraisal = appraisalService.getAppraisalById(appraisalId);
@@ -55,7 +59,7 @@ public class AppraisalController {
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_PDF);
-        headers.setContentDispositionFormData("filename", "peritaje-inmobiliario.pdf");
+        headers.setContentDisposition(ContentDisposition.attachment().filename("peritaje-inmobiliario.pdf").build());
         headers.setContentLength(pdfBytes.length);
 
         return ResponseEntity.ok().headers(headers).body(pdfBytes);

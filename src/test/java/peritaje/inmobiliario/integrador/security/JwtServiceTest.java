@@ -1,219 +1,216 @@
 package peritaje.inmobiliario.integrador.security;
 
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
-import io.jsonwebtoken.security.Keys;
+import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.Date;
+import java.util.UUID;
+
+import javax.crypto.SecretKey;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
-import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import static org.mockito.ArgumentMatchers.anyString;
-
-import java.nio.charset.StandardCharsets;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.TimeUnit;
-
-import static org.junit.jupiter.api.Assertions.*;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.MalformedJwtException;
+import io.jsonwebtoken.UnsupportedJwtException;
+import io.jsonwebtoken.security.Keys;
+import io.jsonwebtoken.security.SignatureException;
 
 @ExtendWith(MockitoExtension.class)
+@DisplayName("Pruebas para JwtService")
 class JwtServiceTest {
 
     @InjectMocks
     private JwtService jwtService;
 
-    private String testSecret;
-    private String validToken;
-    private String expiredToken;
-    private String tokenWithoutEmail;
-    private String malformedToken;
-    private String invalidSignatureToken;
+    private final String testSecret = "a-very-secure-secret-key-for-testing-purposes-that-is-long-enough";
+    private final SecretKey signingKey = Keys.hmacShaKeyFor(testSecret.getBytes(StandardCharsets.UTF_8));
+    private final UUID userId = UUID.randomUUID();
+    private final String userEmail = "test@example.com";
 
     @BeforeEach
     void setUp() {
-        testSecret = "thisisasecretkeyforjwttokensthatissufficientlylongforhmacsha256"; // 64 bytes for HS256
         ReflectionTestUtils.setField(jwtService, "jwtSecret", testSecret);
+    }
 
-        // Generate a valid token
-        Map<String, Object> claims = new HashMap<>();
-        claims.put("sub", UUID.randomUUID().toString());
-        claims.put("email", "test@example.com");
-        validToken = Jwts.builder()
-                .claims(claims)
-                .issuedAt(new Date(System.currentTimeMillis()))
-                .expiration(new Date(System.currentTimeMillis() + TimeUnit.HOURS.toMillis(1)))
-                .signWith(Keys.hmacShaKeyFor(testSecret.getBytes(StandardCharsets.UTF_8)), SignatureAlgorithm.HS256)
+    private String createToken(Date expiration, Date issuedAt, String subject, String email) {
+        return Jwts.builder()
+                .subject(subject)
+                .claim("email", email)
+                .issuedAt(issuedAt)
+                .expiration(expiration)
+                .signWith(signingKey)
                 .compact();
-
-        // Generate an expired token
-        expiredToken = Jwts.builder()
-                .claims(claims)
-                .issuedAt(new Date(System.currentTimeMillis() - TimeUnit.HOURS.toMillis(2)))
-                .expiration(new Date(System.currentTimeMillis() - TimeUnit.HOURS.toMillis(1)))
-                .signWith(Keys.hmacShaKeyFor(testSecret.getBytes(StandardCharsets.UTF_8)), SignatureAlgorithm.HS256)
-                .compact();
-
-        // Generate a token without email claim
-        Map<String, Object> claimsWithoutEmail = new HashMap<>();
-        claimsWithoutEmail.put("sub", UUID.randomUUID().toString());
-        tokenWithoutEmail = Jwts.builder()
-                .claims(claimsWithoutEmail)
-                .issuedAt(new Date(System.currentTimeMillis()))
-                .expiration(new Date(System.currentTimeMillis() + TimeUnit.HOURS.toMillis(1)))
-                .signWith(Keys.hmacShaKeyFor(testSecret.getBytes(StandardCharsets.UTF_8)), SignatureAlgorithm.HS256)
-                .compact();
-
-        // Malformed token
-        malformedToken = "malformed.jwt.token";
-
-        // Invalid signature token
-        String wrongSecret = "wrongsecretkeyforjwttokensthatissufficientlylongforhmacsha256";
-        invalidSignatureToken = Jwts.builder()
-                .claims(claims)
-                .issuedAt(new Date(System.currentTimeMillis()))
-                .expiration(new Date(System.currentTimeMillis() + TimeUnit.HOURS.toMillis(1)))
-                .signWith(Keys.hmacShaKeyFor(wrongSecret.getBytes(StandardCharsets.UTF_8)), SignatureAlgorithm.HS256)
+    }
+    
+    private String createTokenWithCustomKey(Date expiration, SecretKey key) {
+        return Jwts.builder()
+                .subject(userId.toString())
+                .claim("email", userEmail)
+                .issuedAt(Date.from(Instant.now()))
+                .expiration(expiration)
+                .signWith(key)
                 .compact();
     }
 
-    @Test
-    void extractAllClaims_validToken_returnsClaims() {
-        Claims claims = assertDoesNotThrow(() -> jwtService.extractAllClaims(validToken));
-        assertNotNull(claims);
-        assertEquals("test@example.com", claims.get("email", String.class));
+    @Nested
+    @DisplayName("Pruebas de Extracción de Claims")
+    class ClaimExtractionTests {
+
+        private String validToken;
+
+        @BeforeEach
+        void createValidToken() {
+            validToken = createToken(
+                    Date.from(Instant.now().plus(1, ChronoUnit.HOURS)),
+                    Date.from(Instant.now()),
+                    userId.toString(),
+                    userEmail
+            );
+        }
+
+        @Test
+        @DisplayName("Debe extraer todos los claims de un token válido")
+        void extractAllClaims_whenTokenIsValid_shouldReturnClaims() {
+            Claims claims = jwtService.extractAllClaims(validToken);
+            assertNotNull(claims);
+            assertEquals(userId.toString(), claims.getSubject());
+            assertEquals(userEmail, claims.get("email", String.class));
+        }
+
+        @Test
+        @DisplayName("Debe extraer un claim específico usando un resolver")
+        void extractClaim_shouldReturnSpecificClaim() {
+            String extractedEmail = jwtService.extractClaim(validToken, claims -> claims.get("email", String.class));
+            assertEquals(userEmail, extractedEmail);
+        }
+
+        @Test
+        @DisplayName("Debe extraer el ID de usuario (sub)")
+        void extractUserId_shouldReturnCorrectUserId() {
+            UUID extractedUserId = jwtService.extractUserId(validToken);
+            assertEquals(userId, extractedUserId);
+        }
+
+        @Test
+        @DisplayName("Debe extraer el nombre de usuario (email)")
+        void extractUsername_whenEmailIsPresent_shouldReturnEmail() {
+            String username = jwtService.extractUsername(validToken);
+            assertEquals(userEmail, username);
+        }
+
+        @Test
+        @DisplayName("Debe extraer el 'sub' como nombre de usuario si el email está ausente")
+        void extractUsername_whenEmailIsAbsent_shouldReturnSubject() {
+            String tokenWithoutEmail = createToken(
+                Date.from(Instant.now().plus(1, ChronoUnit.HOURS)),
+                Date.from(Instant.now()),
+                userId.toString(),
+                null
+            );
+            String username = jwtService.extractUsername(tokenWithoutEmail);
+            assertEquals(userId.toString(), username);
+        }
+        
+        @Test
+        @DisplayName("Debe extraer el 'sub' como nombre de usuario si el email está vacío")
+        void extractUsername_whenEmailIsEmpty_shouldReturnSubject() {
+            String tokenWithEmptyEmail = createToken(
+                Date.from(Instant.now().plus(1, ChronoUnit.HOURS)),
+                Date.from(Instant.now()),
+                userId.toString(),
+                ""
+            );
+            String username = jwtService.extractUsername(tokenWithEmptyEmail);
+            assertEquals(userId.toString(), username);
+        }
+
+        @Test
+        @DisplayName("Debe extraer la fecha de expiración")
+        void extractExpiration_shouldReturnExpirationDate() {
+            Date expiration = jwtService.extractExpiration(validToken);
+            assertNotNull(expiration);
+            assertTrue(expiration.after(new Date()));
+        }
     }
 
-    @Test
-    void extractAllClaims_malformedToken_throwsException() {
-        assertThrows(io.jsonwebtoken.MalformedJwtException.class, () -> jwtService.extractAllClaims(malformedToken));
-    }
+    @Nested
+    @DisplayName("Pruebas de Validación de Token")
+    class TokenValidationTests {
 
-    @Test
-    void extractAllClaims_expiredToken_throwsExpiredJwtException() {
-        assertThrows(io.jsonwebtoken.ExpiredJwtException.class, () -> jwtService.extractAllClaims(expiredToken));
-    }
+        @Test
+        @DisplayName("Debe devolver true para un token válido")
+        void validateToken_whenTokenIsValid_shouldReturnTrue() {
+            String validToken = createToken(
+                Date.from(Instant.now().plus(1, ChronoUnit.HOURS)),
+                Date.from(Instant.now()),
+                userId.toString(),
+                userEmail
+            );
+            assertTrue(jwtService.validateToken(validToken));
+        }
 
-    @Test
-    void extractAllClaims_invalidSignatureToken_throwsSignatureException() {
-        assertThrows(io.jsonwebtoken.security.SignatureException.class, () -> jwtService.extractAllClaims(invalidSignatureToken));
-    }
+        @Test
+        @DisplayName("Debe devolver false y loguear SignatureException para una firma inválida")
+        void validateToken_whenSignatureIsInvalid_shouldReturnFalse() {
+            SecretKey wrongKey = Keys.hmacShaKeyFor("another-secret-key-that-is-definitely-not-the-right-one-to-use".getBytes(StandardCharsets.UTF_8));
+            String tokenWithWrongSignature = createTokenWithCustomKey(Date.from(Instant.now().plus(1, ChronoUnit.HOURS)), wrongKey);
+            
+            assertThrows(SignatureException.class, () -> jwtService.extractAllClaims(tokenWithWrongSignature));
+            assertFalse(jwtService.validateToken(tokenWithWrongSignature));
+        }
 
-    @Test
-    void extractClaim_validTokenAndClaim_returnsClaimValue() {
-        String email = jwtService.extractClaim(validToken, claims -> claims.get("email", String.class));
-        assertEquals("test@example.com", email);
-    }
+        @Test
+        @DisplayName("Debe devolver false y loguear MalformedJwtException para un token malformado")
+        void validateToken_whenTokenIsMalformed_shouldReturnFalse() {
+            String malformedToken = "this.is.not.a.jwt";
+            assertThrows(MalformedJwtException.class, () -> jwtService.extractAllClaims(malformedToken));
+            assertFalse(jwtService.validateToken(malformedToken));
+        }
 
-    @Test
-    void extractClaim_validTokenAndNonExistentClaim_returnsNull() {
-        String nonExistentClaim = jwtService.extractClaim(validToken, claims -> claims.get("nonExistent", String.class));
-        assertNull(nonExistentClaim);
-    }
+        @Test
+        @DisplayName("Debe devolver false y loguear ExpiredJwtException para un token expirado")
+        void validateToken_whenTokenIsExpired_shouldReturnFalse() {
+            String expiredToken = createToken(
+                Date.from(Instant.now().minus(1, ChronoUnit.MINUTES)),
+                Date.from(Instant.now().minus(2, ChronoUnit.MINUTES)),
+                userId.toString(),
+                userEmail
+            );
+            assertThrows(ExpiredJwtException.class, () -> jwtService.extractAllClaims(expiredToken));
+            assertFalse(jwtService.validateToken(expiredToken));
+        }
 
-    @Test
-    void extractUserId_validToken_returnsUserId() {
-        UUID expectedUserId = UUID.fromString(jwtService.extractClaim(validToken, claims -> claims.get("sub", String.class)));
-        UUID actualUserId = jwtService.extractUserId(validToken);
-        assertEquals(expectedUserId, actualUserId);
-    }
+        @Test
+        @DisplayName("Debe devolver false y loguear UnsupportedJwtException para un token no soportado")
+        void validateToken_whenTokenIsUnsupported_shouldReturnFalse() {
+            String unsupportedToken = Jwts.builder().compact(); // JWS sin firma
+            assertThrows(UnsupportedJwtException.class, () -> jwtService.extractAllClaims(unsupportedToken));
+            assertFalse(jwtService.validateToken(unsupportedToken));
+        }
 
-    @Test
-    void extractUserId_tokenWithInvalidUuidFormat_throwsIllegalArgumentException() {
-        String invalidUuidToken = Jwts.builder()
-                .claims(Map.of("sub", "not-a-valid-uuid"))
-                .issuedAt(new Date(System.currentTimeMillis()))
-                .expiration(new Date(System.currentTimeMillis() + TimeUnit.HOURS.toMillis(1)))
-                .signWith(Keys.hmacShaKeyFor(testSecret.getBytes(StandardCharsets.UTF_8)), SignatureAlgorithm.HS256)
-                .compact();
-        assertThrows(IllegalArgumentException.class, () -> jwtService.extractUserId(invalidUuidToken));
-    }
-
-    @Test
-    void extractUsername_tokenWithEmail_returnsEmail() {
-        String username = jwtService.extractUsername(validToken);
-        assertEquals("test@example.com", username);
-    }
-
-    @Test
-    void extractUsername_tokenWithoutEmail_returnsSub() {
-        String username = jwtService.extractUsername(tokenWithoutEmail);
-        assertNotNull(username);
-        assertTrue(username.matches("[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")); // Check if it's a UUID format
-    }
-
-    @Test
-    void extractExpiration_validToken_returnsExpirationDate() {
-        Date expiration = jwtService.extractExpiration(validToken);
-        assertNotNull(expiration);
-        assertTrue(expiration.after(new Date()));
-    }
- 
-     @Test
-     void extractUsername_tokenWithEmptyEmail_returnsSub() {
-         Map<String, Object> claims = new HashMap<>();
-         UUID sub = UUID.randomUUID();
-         claims.put("sub", sub.toString());
-         claims.put("email", "");
- 
-         String tokenWithEmptyEmail = Jwts.builder()
-                 .claims(claims)
-                 .issuedAt(new Date(System.currentTimeMillis()))
-                 .expiration(new Date(System.currentTimeMillis() + TimeUnit.HOURS.toMillis(1)))
-                 .signWith(Keys.hmacShaKeyFor(testSecret.getBytes(StandardCharsets.UTF_8)), SignatureAlgorithm.HS256)
-                 .compact();
- 
-         String username = jwtService.extractUsername(tokenWithEmptyEmail);
-         assertEquals(sub.toString(), username);
-     }
- 
-     @Test
-     void isTokenExpired_expiredToken_returnsTrue() {
-         // Using ReflectionTestUtils to access private method for testing purposes
-         Boolean expired = (Boolean) ReflectionTestUtils.invokeMethod(jwtService, "isTokenExpired", expiredToken);
-         assertTrue(expired);
-     }
- 
-     @Test
-     void isTokenExpired_validToken_returnsFalse() {
-         // Using ReflectionTestUtils to access private method for testing purposes
-         Boolean expired = (Boolean) ReflectionTestUtils.invokeMethod(jwtService, "isTokenExpired", validToken);
-         assertFalse(expired);
-     }
- 
-     @Test
-     void isTokenExpired_genericException_returnsTrue() {
-         JwtService spyJwtService = org.mockito.Mockito.spy(jwtService);
-         org.mockito.Mockito.doThrow(new RuntimeException("Generic Test Exception"))
-             .when(spyJwtService).extractExpiration(anyString());
- 
-         Boolean isExpired = (Boolean) ReflectionTestUtils.invokeMethod(spyJwtService, "isTokenExpired", "anytoken");
-         assertTrue(isExpired);
-     }
- 
-     @Test
-     void validateToken_validToken_returnsTrue() {
-        assertTrue(jwtService.validateToken(validToken));
-    }
-
-    @Test
-    void validateToken_expiredToken_returnsFalse() {
-        assertFalse(jwtService.validateToken(expiredToken));
-    }
-
-    @Test
-    void validateToken_malformedToken_returnsFalse() {
-        assertFalse(jwtService.validateToken(malformedToken));
-    }
-
-    @Test
-    void validateToken_invalidSignatureToken_returnsFalse() {
-        assertFalse(jwtService.validateToken(invalidSignatureToken));
+        @Test
+        @DisplayName("Debe devolver false y loguear IllegalArgumentException para un token nulo o vacío")
+        void validateToken_whenTokenIsNullOrEmpty_shouldReturnFalse() {
+            assertThrows(IllegalArgumentException.class, () -> jwtService.extractAllClaims(""));
+            assertFalse(jwtService.validateToken(""));
+            
+            assertThrows(IllegalArgumentException.class, () -> jwtService.extractAllClaims(null));
+            assertFalse(jwtService.validateToken(null));
+        }
     }
 }

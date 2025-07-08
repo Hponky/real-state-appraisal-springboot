@@ -3,6 +3,7 @@ package peritaje.inmobiliario.integrador.security.config;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -14,6 +15,7 @@ import peritaje.inmobiliario.integrador.security.JwtTokenFilter;
 @Configuration
 @EnableWebSecurity
 @Profile("!test")
+@EnableMethodSecurity
 public class SecurityConfig {
 
     private final JwtTokenFilter jwtTokenFilter;
@@ -27,7 +29,7 @@ public class SecurityConfig {
         http
                 .csrf(csrf -> csrf.disable()) // Deshabilitar CSRF para APIs REST
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/api/public/**", "/api/appraisal/download-pdf/**").permitAll()
+                        .requestMatchers("/api/auth/**", "/api/public/**").permitAll()
                         .anyRequest().authenticated() // Requerir autenticación para cualquier otra solicitud
                 )
                 .sessionManagement(session -> session

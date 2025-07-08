@@ -34,3 +34,6 @@ build/
 *.log
 logs/spring-boot-app.log.2025-06-10.0.gz
 logs
+task-breakdown-20250701173746-ejecutar-pruebas-cobertura.md
+task-breakdown-20250702000413-cobertura-backend-100.md
+task-breakdown-20250708003719-analizar-y-completar-cobertura-pruebas.md

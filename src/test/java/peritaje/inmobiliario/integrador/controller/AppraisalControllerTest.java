@@ -80,7 +80,7 @@ public class AppraisalControllerTest {
         mockMvc.perform(get("/api/appraisal/download-pdf").param("appraisalId", appraisalId))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_PDF))
-                .andExpect(header().string("Content-Disposition", "form-data; name=\"filename\"; filename=\"peritaje-inmobiliario.pdf\""));
+                .andExpect(header().string("Content-Disposition", "attachment; filename=\"peritaje-inmobiliario.pdf\""));
     }
 
     @Test

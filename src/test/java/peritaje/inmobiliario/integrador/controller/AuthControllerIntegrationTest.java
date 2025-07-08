@@ -1,15 +1,17 @@
 package peritaje.inmobiliario.integrador.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.autoconfigure.web.reactive.WebFluxTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.reactive.server.WebTestClient;
+
 import peritaje.inmobiliario.integrador.config.TestSecurityConfig;
 import peritaje.inmobiliario.integrador.dto.AuthRequest;
 import peritaje.inmobiliario.integrador.dto.AuthResponse;
@@ -17,99 +19,105 @@ import peritaje.inmobiliario.integrador.exception.InvalidCredentialsException;
 import peritaje.inmobiliario.integrador.exception.SupabaseIntegrationException;
 import peritaje.inmobiliario.integrador.exception.UserAlreadyExistsException;
 import peritaje.inmobiliario.integrador.service.ISupabaseAuthService;
+import peritaje.inmobiliario.integrador.security.JwtTokenFilter;
 import reactor.core.publisher.Mono;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
-@SpringBootTest
-@AutoConfigureMockMvc
+@WebFluxTest(AuthController.class)
 @Import(TestSecurityConfig.class)
 class AuthControllerIntegrationTest {
 
     @Autowired
-    private MockMvc mockMvc;
+    private WebTestClient webTestClient;
 
     @MockBean
     private ISupabaseAuthService supabaseAuthService;
 
-    @Autowired
-    private ObjectMapper objectMapper;
+    @MockBean
+    private JwtTokenFilter jwtTokenFilter;
 
-    private AuthRequest validAuthRequest;
-    private AuthRequest invalidAuthRequest;
-    private AuthResponse authResponse;
+    private AuthRequest validAuthRequest = new AuthRequest("test@example.com", "password123");
+    private AuthRequest invalidAuthRequest = new AuthRequest("invalid@example.com", "wrongpassword");
+    private AuthResponse authResponse = new AuthResponse("access_token_test", "bearer", 3600, "refresh_token_test", new AuthResponse.User("user-id-123", "test@example.com"));
 
     @BeforeEach
     void setUp() {
-        validAuthRequest = new AuthRequest("test@example.com", "password123");
-        invalidAuthRequest = new AuthRequest("invalid@example.com", "wrongpassword");
-        authResponse = new AuthResponse("access_token_test", "bearer", 3600, "refresh_token_test", new AuthResponse.User("user-id-123", "test@example.com"));
+        // El setup ahora es manejado por las anotaciones de Spring Boot
     }
 
     @Test
-    void signUp_success() throws Exception {
+    void signUp_success() {
         when(supabaseAuthService.signUp(any(AuthRequest.class))).thenReturn(Mono.just(authResponse));
 
-        mockMvc.perform(post("/api/public/auth/signup")
+        webTestClient
+                .post().uri("/api/auth/signup")
                 .contentType(MediaType.APPLICATION_JSON)
-                .accept(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(validAuthRequest))
-                .with(csrf()))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.access_token").value(authResponse.getAccessToken()));
+                .bodyValue(validAuthRequest)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(AuthResponse.class)
+                .value(response -> {
+                    assert response.getAccessToken().equals(authResponse.getAccessToken());
+                });
     }
 
     @Test
-    void signUp_userAlreadyExists() throws Exception {
-        when(supabaseAuthService.signUp(any(AuthRequest.class))).thenThrow(new UserAlreadyExistsException("Email already registered"));
+    void signUp_userAlreadyExists() {
+        String errorMessage = "El usuario ya existe.";
+        when(supabaseAuthService.signUp(any(AuthRequest.class))).thenReturn(Mono.error(new UserAlreadyExistsException(errorMessage)));
 
-        mockMvc.perform(post("/api/public/auth/signup")
+        webTestClient
+                .post().uri("/api/auth/signup")
                 .contentType(MediaType.APPLICATION_JSON)
-                .accept(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(validAuthRequest))
-                .with(csrf()))
-                .andExpect(status().isConflict());
+                .bodyValue(validAuthRequest)
+                .exchange()
+                .expectStatus().isEqualTo(HttpStatus.CONFLICT)
+                .expectBody()
+                .jsonPath("$.message").isEqualTo(errorMessage);
     }
 
     @Test
-    void signIn_success() throws Exception {
+    void signIn_success() {
         when(supabaseAuthService.signIn(any(AuthRequest.class))).thenReturn(Mono.just(authResponse));
 
-        mockMvc.perform(post("/api/public/auth/signin")
+        webTestClient
+                .post().uri("/api/auth/signin")
                 .contentType(MediaType.APPLICATION_JSON)
-                .accept(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(validAuthRequest))
-                .with(csrf()))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.access_token").value(authResponse.getAccessToken()));
+                .bodyValue(validAuthRequest)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(AuthResponse.class)
+                .value(response -> {
+                    assert response.getAccessToken().equals(authResponse.getAccessToken());
+                });
     }
 
     @Test
-    void signIn_invalidCredentials() throws Exception {
-        when(supabaseAuthService.signIn(any(AuthRequest.class))).thenThrow(new InvalidCredentialsException("Credenciales inválidas"));
+    void signIn_invalidCredentials() {
+        String errorMessage = "Credenciales de autenticacion invalidas.";
+        when(supabaseAuthService.signIn(any(AuthRequest.class))).thenReturn(Mono.error(new InvalidCredentialsException(errorMessage)));
 
-        mockMvc.perform(post("/api/public/auth/signin")
+        webTestClient
+                .post().uri("/api/auth/signin")
                 .contentType(MediaType.APPLICATION_JSON)
-                .accept(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(invalidAuthRequest))
-                .with(csrf()))
-                .andExpect(status().isUnauthorized());
+                .bodyValue(invalidAuthRequest)
+                .exchange()
+                .expectStatus().isUnauthorized()
+                .expectBody()
+                .jsonPath("$.message").isEqualTo(errorMessage);
     }
     
     @Test
-    void signIn_supabaseIntegrationFailure() throws Exception {
-        when(supabaseAuthService.signIn(any(AuthRequest.class))).thenThrow(new SupabaseIntegrationException("Supabase signin failed"));
+    void signIn_supabaseIntegrationFailure() {
+        String errorMessage = "Error de integración con el servicio externo. Intente de nuevo más tarde.";
+        when(supabaseAuthService.signIn(any(AuthRequest.class))).thenReturn(Mono.error(new SupabaseIntegrationException("Supabase signin failed")));
 
-        mockMvc.perform(post("/api/public/auth/signin")
+        webTestClient
+                .post().uri("/api/auth/signin")
                 .contentType(MediaType.APPLICATION_JSON)
-                .accept(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(validAuthRequest))
-                .with(csrf()))
-                .andExpect(status().isServiceUnavailable());
+                .bodyValue(validAuthRequest)
+                .exchange()
+                .expectStatus().isEqualTo(HttpStatus.SERVICE_UNAVAILABLE)
+                .expectBody()
+                .jsonPath("$.message").isEqualTo(errorMessage);
     }
 }

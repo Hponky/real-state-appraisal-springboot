@@ -1,9 +1,7 @@
 package peritaje.inmobiliario.integrador.service;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
-
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -22,14 +20,9 @@ public class SupabaseAuthService implements ISupabaseAuthService {
     private final WebClient webClient;
     private final ObjectMapper objectMapper;
 
-    public SupabaseAuthService(@Value("${supabase.url}") String supabaseUrl,
-            @Value("${supabase.service-key}") String supabaseServiceKey) {
+    public SupabaseAuthService(WebClient webClient) {
         this.objectMapper = new ObjectMapper();
-        this.webClient = WebClient.builder().baseUrl(supabaseUrl)
-                .defaultHeader("apikey", supabaseServiceKey)
-                .defaultHeader("Authorization", "Bearer " + supabaseServiceKey)
-                .defaultHeader("Content-Type", "application/json")
-                .build();
+        this.webClient = webClient;
     }
 
     @Override

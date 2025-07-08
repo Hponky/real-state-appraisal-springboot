@@ -10,8 +10,9 @@ import peritaje.inmobiliario.integrador.dto.AuthRequest;
 import peritaje.inmobiliario.integrador.dto.AuthResponse;
 import peritaje.inmobiliario.integrador.service.ISupabaseAuthService;
 import reactor.core.publisher.Mono;
+
 @RestController
-@RequestMapping("/api/public/auth")
+@RequestMapping("/api/auth")
 public class AuthController {
 
     private final ISupabaseAuthService supabaseAuthService;
